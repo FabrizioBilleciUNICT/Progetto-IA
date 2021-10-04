@@ -1,0 +1,3 @@
+Protein-protein interaction network in budding yeast a network with 2361 vertices and 7182 edges (536 loops).
+
+Dongbo Bu, Yi Zhao, Lun Cai, Hong Xue, Xiaopeng Zhu, Hongchao Lu, Jingfen Zhang, Shiwei Sun, Lunjiang Ling, Nan Zhang, Guojie Li, Runsheng Chen: Topological structure analysis of the protein-protein interaction network in budding yeast. Nucleic Acids Research, 2003, Vol. 31, No. 9 2443-2450
