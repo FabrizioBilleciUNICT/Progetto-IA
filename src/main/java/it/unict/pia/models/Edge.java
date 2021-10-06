@@ -5,11 +5,13 @@ public class Edge {
     private String source;
     private String target;
     private String id;
+    private int weight;
 
     public Edge(String source, String target) {
         this.source = source;
         this.target = target;
         this.id = source + "-" + target;
+        this.weight = 1;
     }
 
     public String getSource() {
@@ -34,5 +36,13 @@ public class Edge {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
     }
 }
