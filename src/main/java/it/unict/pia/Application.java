@@ -5,7 +5,6 @@ import it.unict.pia.models.*;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Application {
 
@@ -109,11 +108,95 @@ public class Application {
         return (cutCounter + 0.0) / (Math.min(degreeP0, degreeP1) + 0.0);
     }
 
-    // TODO
     private Partition solutionGuidedCoarsening(Partition s_i) {
-        // change something in nodes & edges
-        Partition s_i1 = s_i; //new Partition();
-        return s_i1;
+        //Compute heavy-edge maximal matching.
+        LinkedList<Node> vertexOrder = new LinkedList<>(graph.nodeSet());
+
+        Collections.shuffle(vertexOrder);
+
+        Set<Node> verticesInMatching = new HashSet<>();
+        Set<Edge> edgesInMatching = new HashSet<>();
+
+        Edge.EdgeComparator edgeComparator = new Edge.EdgeComparator();
+
+        for (Node curVertex : vertexOrder) {
+            curVertex.setPartition(s_i.getP0().contains(curVertex));
+
+            if (!verticesInMatching.contains(curVertex)) {
+                verticesInMatching.add(curVertex);
+
+                Set<Edge> curEdges = graph.edgesOf(curVertex);
+                LinkedList<Edge> curEdgesList = new LinkedList<>(curEdges);
+
+                curEdgesList.sort(edgeComparator);
+
+                for (Edge curEdge : curEdgesList) {
+                    Node neighbourVertex = graph.getEdgeSource(curEdge);
+
+                    if (neighbourVertex == curVertex) {
+                        neighbourVertex = graph.getEdgeTarget(curEdge);
+                    }
+
+                    if (!verticesInMatching.contains(neighbourVertex)) {
+                        // We've found an edge to add to the matching
+                        edgesInMatching.add(curEdge);
+                        verticesInMatching.add(neighbourVertex);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // now use the matching to construct the coarser graph
+        Graph coarseGraph = new Graph();
+
+        // add to the coarse graph vertices which correspond to edges in the matching
+        for (Edge curEdge : edgesInMatching) {
+            Node newVertex = new Node(curEdge.getId(), "--");
+
+            Node source = graph.getEdgeSource(curEdge);
+            Node target = graph.getEdgeTarget(curEdge);
+
+            newVertex.addSubordinate(source);
+            newVertex.addSubordinate(target);
+            newVertex.setPartition(s_i.getP0().contains(source) && s_i.getP0().contains(target));
+
+            coarseGraph.addNode(newVertex);
+
+            verticesInMatching.remove(source);
+            verticesInMatching.remove(target);
+        }
+
+        // verticesInMatching now only contains lone vertices,
+        // those which weren't assigned a partner in the matching :(
+        for (Node curVertex : verticesInMatching) {
+            Node newVertex = new Node(curVertex.getId(), curVertex.getLabel());
+            newVertex.setPartition(s_i.getP0().contains(curVertex));
+            newVertex.addSubordinate(curVertex);
+            coarseGraph.addNode(newVertex);
+        }
+
+        // the courseGraph has all the vertices it'll ever get, now it needs the edges
+        for (Edge curEdge : graph.edgeSet()) {
+            Node parent1 = graph.getEdgeSource(curEdge).getParent();
+            Node parent2 = graph.getEdgeTarget(curEdge).getParent();
+
+            if (parent1 != parent2) {
+                int oldEdgeWeight = graph.getEdgeWeight(curEdge);
+                Edge edgeInCoarseGraph = coarseGraph.getEdge(parent1, parent2);
+
+                if (edgeInCoarseGraph != null) {
+                    coarseGraph.setEdgeWeight(edgeInCoarseGraph, coarseGraph.getEdgeWeight(edgeInCoarseGraph) + oldEdgeWeight);
+                } else {
+                    edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
+                    coarseGraph.setEdgeWeight(edgeInCoarseGraph, oldEdgeWeight);
+                }
+            }
+        }
+
+        this.graph = coarseGraph;
+
+        return new Partition(coarseGraph); // s_i1
     }
 
     // TODO
@@ -137,6 +220,8 @@ public class Application {
             mv = 0.0;
             for (int i = 0; i < salter; i++) {
                 Node v = getRandomVertexCV(s_i);
+                if (v == null) break;
+
                 Partition s_p = relocate(s_i, v);
                 final int d = delta(s_p, v);
                 if (d < 0 || canRelocate(T, d)) {
@@ -155,18 +240,31 @@ public class Application {
             else belowCount = 0;
         }
 
-        Partition s_i1 = s_i; //new Partition();
-        return s_i1;
+        return s_best; // s_i1
     }
 
-    // TODO
     private Node getRandomVertexCV(Partition s_i) {
-        return this.graph.nodeSet().stream().collect(Collectors.toUnmodifiableList()).get(0);
+        Set<Node> nodes = new HashSet<>();
+        for (Map.Entry<String, Edge> entry : this.graph.getEdgesMap().entrySet()) {
+            final Node nodeSource = this.graph.getEdgeSource(entry.getValue());
+            final Node nodeTarget = this.graph.getEdgeTarget(entry.getValue());
+
+            if ((s_i.getP0().contains(nodeSource) && s_i.getP1().contains(nodeTarget)) || (s_i.getP1().contains(nodeSource) && s_i.getP0().contains(nodeTarget))) {
+                nodes.add(nodeSource);
+                nodes.add(nodeTarget);
+            }
+        }
+
+        Node[] arr = nodes.toArray(Node[]::new);
+        if (arr.length > 0) return arr[new Random().nextInt(nodes.size())];
+        else return null;
     }
 
-    // TODO
     private Partition relocate(Partition s_i, Node v) {
-        return s_i; //new Partition();
+        Partition s_i1 = new Partition();
+        s_i1.setPartition(new ArrayList<>(Set.of(s_i.getP0(), s_i1.getP1())));
+        s_i1.relocateNode(v);
+        return s_i1;
     }
 
     private int delta(Partition s_i, Node v) {

@@ -58,4 +58,32 @@ public class Graph {
     public Map<String, Edge> getEdgesMap() {
         return edgesMap;
     }
+
+    public Edge getEdge(Node n1, Node n2) {
+        final String t1 = n1.getId() + "-" + n2.getId();
+        final String t2 = n2.getId() + "-" + n1.getId();
+
+        if (this.edgesMap.containsKey(t1)) return this.edgesMap.get(t1);
+        else return this.edgesMap.getOrDefault(t2, null);
+    }
+
+    public int getEdgeWeight(Edge e) {
+        return this.edgesMap.get(e.getId()).getWeight();
+    }
+
+    public void setEdgeWeight(Edge e, int newWeight) {
+        Edge newE = this.edgesMap.get(e.getId());
+        newE.setWeight(newWeight);
+        this.edgesMap.put(e.getId(), newE);
+    }
+
+    public Edge addEdge(Node n1, Node n2) {
+        Edge newEdge = new Edge(n1.getId(), n2.getId());
+        this.edgesMap.put(newEdge.getId(), newEdge);
+        return newEdge;
+    }
+
+    public void addNode(Node n) {
+        this.nodesMap.put(n.getId(), n);
+    }
 }
