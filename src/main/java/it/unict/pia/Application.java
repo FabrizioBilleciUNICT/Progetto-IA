@@ -8,7 +8,8 @@ import java.util.*;
 
 public class Application {
 
-    private Graph graph;
+    //private Graph graph;
+    private Stack<Graph> graphs = new Stack<>();
     private final String network;
 
     public Application(String network) {
@@ -48,30 +49,31 @@ public class Application {
             count++;
         }
 
-        this.graph = new Graph(nodesMap, edgesMap);
+        this.graphs.add(new Graph(nodesMap, edgesMap));
     }
 
     public Partition annealing() {
-        final int ct = 100; // 60000
+        final int ct = 130; // 60000
 
         final Partition s_0 = createSeedPartition();
         Partition s_star = s_0;
         Partition s_i = s_0;
-        int i = 0;
+        int i = 0; // level
         for (int k = 0; k < 100; k++) {
-            while (this.graph.getSize() > ct) {
-                s_i = solutionGuidedCoarsening(s_i);
-                s_i = localRefinement(s_i);
+            while (this.graphs.get(i).getSize() > ct) {
+                s_i = solutionGuidedCoarsening(s_i, i);
+                s_i = localRefinement(s_i, i);
+                System.out.println("Iter: " + i + " partitions: [" + s_i.getP0().size() + ", " + s_i.getP1().size() + "]");
                 i++;
             }
 
             while (i > 0) {
+                s_i = unCoarsening(s_i, i);
+                s_i = localRefinement(s_i, i);
                 i--;
-                s_i = unCoarsening(s_i);
-                s_i = localRefinement(s_i);
             }
 
-            if (conductance(s_i) < conductance(s_star)) {
+            if (conductance(s_i, i) < conductance(s_star, i)) {
                 s_star = s_i;
             }
         }
@@ -80,17 +82,17 @@ public class Application {
     }
 
     private Partition createSeedPartition() {
-        return new Partition(partitionGraph(this.graph, 2));
+        return new Partition(partitionGraph(this.graphs.get(0), 2));
     }
 
-    private double conductance(Partition s_i) {
+    private double conductance(Partition s_i, int level) {
         int degreeP0 = 0;
         int degreeP1 = 0;
         int cutCounter = 0;
 
-        for (Map.Entry<String, Edge> entry : this.graph.getEdgesMap().entrySet()) {
-            final Node nodeSource = this.graph.getEdgeSource(entry.getValue());
-            final Node nodeTarget = this.graph.getEdgeTarget(entry.getValue());
+        for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
+            final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
+            final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
             // cut
             if ((s_i.getP0().contains(nodeSource) && s_i.getP1().contains(nodeTarget)) || (s_i.getP1().contains(nodeSource) && s_i.getP0().contains(nodeTarget)))
@@ -108,9 +110,9 @@ public class Application {
         return (cutCounter + 0.0) / (Math.min(degreeP0, degreeP1) + 0.0);
     }
 
-    private Partition solutionGuidedCoarsening(Partition s_i) {
+    private Partition solutionGuidedCoarsening(Partition s_i, int level) {
         //Compute heavy-edge maximal matching.
-        LinkedList<Node> vertexOrder = new LinkedList<>(graph.nodeSet());
+        LinkedList<Node> vertexOrder = new LinkedList<>(this.graphs.get(level).nodeSet());
 
         Collections.shuffle(vertexOrder);
 
@@ -125,16 +127,16 @@ public class Application {
             if (!verticesInMatching.contains(curVertex)) {
                 verticesInMatching.add(curVertex);
 
-                Set<Edge> curEdges = graph.edgesOf(curVertex);
+                Set<Edge> curEdges = this.graphs.get(level).edgesOf(curVertex);
                 LinkedList<Edge> curEdgesList = new LinkedList<>(curEdges);
 
                 curEdgesList.sort(edgeComparator);
 
                 for (Edge curEdge : curEdgesList) {
-                    Node neighbourVertex = graph.getEdgeSource(curEdge);
+                    Node neighbourVertex = this.graphs.get(level).getEdgeSource(curEdge);
 
                     if (neighbourVertex == curVertex) {
-                        neighbourVertex = graph.getEdgeTarget(curEdge);
+                        neighbourVertex = this.graphs.get(level).getEdgeTarget(curEdge);
                     }
 
                     if (!verticesInMatching.contains(neighbourVertex)) {
@@ -154,8 +156,8 @@ public class Application {
         for (Edge curEdge : edgesInMatching) {
             Node newVertex = new Node(curEdge.getId(), "--");
 
-            Node source = graph.getEdgeSource(curEdge);
-            Node target = graph.getEdgeTarget(curEdge);
+            Node source = this.graphs.get(level).getEdgeSource(curEdge);
+            Node target = this.graphs.get(level).getEdgeTarget(curEdge);
 
             newVertex.addSubordinate(source);
             newVertex.addSubordinate(target);
@@ -177,12 +179,12 @@ public class Application {
         }
 
         // the courseGraph has all the vertices it'll ever get, now it needs the edges
-        for (Edge curEdge : graph.edgeSet()) {
-            Node parent1 = graph.getEdgeSource(curEdge).getParent();
-            Node parent2 = graph.getEdgeTarget(curEdge).getParent();
+        for (Edge curEdge : this.graphs.get(level).edgeSet()) {
+            Node parent1 = this.graphs.get(level).getEdgeSource(curEdge).getParent();
+            Node parent2 = this.graphs.get(level).getEdgeTarget(curEdge).getParent();
 
             if (parent1 != parent2) {
-                int oldEdgeWeight = graph.getEdgeWeight(curEdge);
+                int oldEdgeWeight = this.graphs.get(level).getEdgeWeight(curEdge);
                 Edge edgeInCoarseGraph = coarseGraph.getEdge(parent1, parent2);
 
                 if (edgeInCoarseGraph != null) {
@@ -194,19 +196,35 @@ public class Application {
             }
         }
 
-        this.graph = coarseGraph;
+        this.graphs.add(coarseGraph);
 
         return new Partition(coarseGraph); // s_i1
     }
 
-    // TODO
-    private Partition unCoarsening(Partition s_i) {
-        // change something in nodes & edges
-        Partition s_i1 = s_i; //new Partition();
-        return s_i1;
+    private Partition unCoarsening(Partition s_i1, int level) {
+        Partition s_i = new Partition();
+        //Graph unCoarsenGraph = new Graph();
+
+        for (int index = 0; index < s_i1.getPartition().size(); index++) {
+            Set<Node> partition = s_i1.getPartition().get(index);
+            Set<Node> newPartition = new HashSet<>(2 * partition.size());
+            for (Node node : partition) {
+                Set<Node> contractedNodes = node.getSubordinates();
+                newPartition.addAll(contractedNodes);
+                for (Node nc : contractedNodes) {
+                    nc.setPartition(index == 0);
+                    this.graphs.get(level-1).getNodesMap().put(nc.getId(), nc);
+                }
+            }
+            s_i.addPartition(index, newPartition);
+        }
+
+        //this.graphs.set(--level, unCoarsenGraph);
+
+        return s_i;
     }
 
-    private Partition localRefinement(Partition s_i) {
+    private Partition localRefinement(Partition s_i, int level) {
         final double T0 = (1.0 + 1e-20) / 2.0;
         double T = T0;
         final double salter = 200.0; //200000.0;
@@ -219,17 +237,17 @@ public class Application {
         while (belowCount < 5) {
             mv = 0.0;
             for (int i = 0; i < salter; i++) {
-                Node v = getRandomVertexCV(s_i);
+                Node v = getRandomVertexCV(s_i, level);
                 if (v == null) break;
 
                 Partition s_p = relocate(s_i, v);
-                final int d = delta(s_p, v);
+                final int d = delta(s_p, v, level);
                 if (d < 0 || canRelocate(T, d)) {
                     s_i = s_p;
                     mv++;
                 }
 
-                if (conductance(s_i) < conductance(s_best)) {
+                if (conductance(s_i, level) < conductance(s_best, level)) {
                     s_best = s_i;
                 }
             }
@@ -243,11 +261,11 @@ public class Application {
         return s_best; // s_i1
     }
 
-    private Node getRandomVertexCV(Partition s_i) {
+    private Node getRandomVertexCV(Partition s_i, int level) {
         Set<Node> nodes = new HashSet<>();
-        for (Map.Entry<String, Edge> entry : this.graph.getEdgesMap().entrySet()) {
-            final Node nodeSource = this.graph.getEdgeSource(entry.getValue());
-            final Node nodeTarget = this.graph.getEdgeTarget(entry.getValue());
+        for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
+            final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
+            final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
             if ((s_i.getP0().contains(nodeSource) && s_i.getP1().contains(nodeTarget)) || (s_i.getP1().contains(nodeSource) && s_i.getP0().contains(nodeTarget))) {
                 nodes.add(nodeSource);
@@ -267,11 +285,11 @@ public class Application {
         return s_i1;
     }
 
-    private int delta(Partition s_i, Node v) {
+    private int delta(Partition s_i, Node v, int level) {
         int degree = 0;
-        for (Map.Entry<String, Edge> entry : this.graph.getEdgesMap().entrySet()) {
-            final Node nodeSource = this.graph.getEdgeSource(entry.getValue());
-            final Node nodeTarget = this.graph.getEdgeTarget(entry.getValue());
+        for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
+            final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
+            final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
             if (nodeSource.equals(v) || nodeTarget.equals(v))
                 if (s_i.getP0().contains(v) || s_i.getP1().contains(v))

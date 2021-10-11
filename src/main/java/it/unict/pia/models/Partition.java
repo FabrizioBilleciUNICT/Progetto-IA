@@ -20,7 +20,7 @@ public class Partition {
     }
 
     public Partition(Graph graph) {
-        ArrayList<Set<Node>> partitions = new ArrayList<>();
+        this.partition = new ArrayList<>();
         Set<Node> nodeSetP0 = graph.nodeSet();
         Set<Node> nodeSetP1 = graph.nodeSet();
 
@@ -29,7 +29,8 @@ public class Partition {
             else nodeSetP1.add(entry.getValue());
         }
 
-        this.partition = partitions;
+        this.partition.add(nodeSetP0);
+        this.partition.add(nodeSetP1);
         this.p0 = nodeSetP0;
         this.p1 = nodeSetP1;
     }
@@ -62,5 +63,10 @@ public class Partition {
         this.partition = new ArrayList<>();
         this.partition.add(this.p0);
         this.partition.add(this.p1);
+    }
+
+    public void addPartition(int index, Set<Node> nodes) {
+        if (this.partition.size() > index) this.partition.set(index, nodes);
+        else this.partition.add(nodes);
     }
 }
