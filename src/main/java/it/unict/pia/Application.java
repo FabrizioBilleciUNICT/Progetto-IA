@@ -4,12 +4,13 @@ import it.unict.pia.models.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.security.SecureRandom;
 import java.util.*;
 
 public class Application {
 
     //private Graph graph;
-    private Stack<Graph> graphs = new Stack<>();
+    public Stack<Graph> graphs = new Stack<>();
     private final String network;
 
     public Application(String network) {
@@ -59,7 +60,7 @@ public class Application {
         Partition s_star = s_0;
         Partition s_i = s_0;
         int i = 0; // level
-        for (int k = 0; k < 100; k++) {
+        for (int k = 0; k < 1; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
                 s_i = localRefinement(s_i, i);
@@ -154,7 +155,7 @@ public class Application {
 
         // add to the coarse graph vertices which correspond to edges in the matching
         for (Edge curEdge : edgesInMatching) {
-            Node newVertex = new Node(curEdge.getId(), "--");
+            Node newVertex = new Node(randomString(5), "--"); // curEdge.getId()
 
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
@@ -524,5 +525,16 @@ public class Application {
         }
 
         return neighbourhood;
+    }
+
+
+    static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    static SecureRandom rnd = new SecureRandom();
+
+    String randomString(int len){
+        StringBuilder sb = new StringBuilder(len);
+        for(int i = 0; i < len; i++)
+            sb.append(AB.charAt(rnd.nextInt(AB.length())));
+        return sb.toString();
     }
 }
