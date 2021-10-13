@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Application {
 
@@ -54,7 +55,7 @@ public class Application {
     }
 
     public Partition annealing() {
-        final int ct = 130; // 60000
+        final int ct = 80; // 60000
 
         final Partition s_0 = createSeedPartition();
         Partition s_star = s_0;
@@ -64,7 +65,7 @@ public class Application {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
                 s_i = localRefinement(s_i, i);
-                System.out.println("Iter: " + i + " partitions: [" + s_i.getP0().size() + ", " + s_i.getP1().size() + "]");
+                System.out.println("Iter: " + i + " partitions: [" + s_i.getPartition().get(0).size() + ", " + s_i.getPartition().get(1).size() + "]");
                 i++;
             }
 
@@ -96,15 +97,15 @@ public class Application {
             final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
             // cut
-            if ((s_i.getP0().contains(nodeSource) && s_i.getP1().contains(nodeTarget)) || (s_i.getP1().contains(nodeSource) && s_i.getP0().contains(nodeTarget)))
+            if ((s_i.getPartition().get(0).contains(nodeSource) && s_i.getPartition().get(1).contains(nodeTarget)) || (s_i.getPartition().get(1).contains(nodeSource) && s_i.getPartition().get(0).contains(nodeTarget)))
                 cutCounter++;
 
             // source
-            if (s_i.getP0().contains(nodeSource)) degreeP0++;
+            if (s_i.getPartition().get(0).contains(nodeSource)) degreeP0++;
             else degreeP1++;
 
             // target
-            if (s_i.getP0().contains(nodeTarget)) degreeP0++;
+            if (s_i.getPartition().get(0).contains(nodeTarget)) degreeP0++;
             else degreeP1++;
         }
 
@@ -123,7 +124,7 @@ public class Application {
         Edge.EdgeComparator edgeComparator = new Edge.EdgeComparator();
 
         for (Node curVertex : vertexOrder) {
-            curVertex.setPartition(s_i.getP0().contains(curVertex));
+            curVertex.setPartition(s_i.getPartition().get(0).contains(curVertex));
 
             if (!verticesInMatching.contains(curVertex)) {
                 verticesInMatching.add(curVertex);
@@ -155,14 +156,14 @@ public class Application {
 
         // add to the coarse graph vertices which correspond to edges in the matching
         for (Edge curEdge : edgesInMatching) {
-            Node newVertex = new Node(randomString(5), "--"); // curEdge.getId()
+            Node newVertex = new Node(randomString(20), "--"); // curEdge.getId()
 
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
 
             newVertex.addSubordinate(source);
             newVertex.addSubordinate(target);
-            newVertex.setPartition(s_i.getP0().contains(source) && s_i.getP0().contains(target));
+            newVertex.setPartition(s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target));
 
             coarseGraph.addNode(newVertex);
 
@@ -174,7 +175,7 @@ public class Application {
         // those which weren't assigned a partner in the matching :(
         for (Node curVertex : verticesInMatching) {
             Node newVertex = new Node(curVertex.getId(), curVertex.getLabel());
-            newVertex.setPartition(s_i.getP0().contains(curVertex));
+            newVertex.setPartition(s_i.getPartition().get(0).contains(curVertex));
             newVertex.addSubordinate(curVertex);
             coarseGraph.addNode(newVertex);
         }
@@ -197,7 +198,8 @@ public class Application {
             }
         }
 
-        this.graphs.add(coarseGraph);
+        if (this.graphs.size() > level + 1) this.graphs.set(level + 1, coarseGraph);
+        else this.graphs.add(coarseGraph);
 
         return new Partition(coarseGraph); // s_i1
     }
@@ -268,7 +270,7 @@ public class Application {
             final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
             final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
-            if ((s_i.getP0().contains(nodeSource) && s_i.getP1().contains(nodeTarget)) || (s_i.getP1().contains(nodeSource) && s_i.getP0().contains(nodeTarget))) {
+            if ((s_i.getPartition().get(0).contains(nodeSource) && s_i.getPartition().get(1).contains(nodeTarget)) || (s_i.getPartition().get(1).contains(nodeSource) && s_i.getPartition().get(0).contains(nodeTarget))) {
                 nodes.add(nodeSource);
                 nodes.add(nodeTarget);
             }
@@ -281,7 +283,7 @@ public class Application {
 
     private Partition relocate(Partition s_i, Node v) {
         Partition s_i1 = new Partition();
-        s_i1.setPartition(new ArrayList<>(Set.of(s_i.getP0(), s_i1.getP1())));
+        s_i1.setPartition(new ArrayList<>(Set.of(s_i.getPartition().get(0), s_i.getPartition().get(1))));
         s_i1.relocateNode(v);
         return s_i1;
     }
@@ -293,7 +295,7 @@ public class Application {
             final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
             if (nodeSource.equals(v) || nodeTarget.equals(v))
-                if (s_i.getP0().contains(v) || s_i.getP1().contains(v))
+                if (s_i.getPartition().get(0).contains(v) || s_i.getPartition().get(1).contains(v))
                     degree++;
         }
 
@@ -392,9 +394,9 @@ public class Application {
 
         Graph leftSubgraph, rightSubgraph;
 
-        leftSubgraph = new UndirectedWeightedSubgraph<>(graph, leftSubgraphVertexSet, leftSubgraphEdgeSet);
+        leftSubgraph = new Graph(leftSubgraphVertexSet, leftSubgraphEdgeSet);
 
-        rightSubgraph = new UndirectedWeightedSubgraph<>(graph, rightSubgraphVertexSet, rightSubgraphEdgeSet);
+        rightSubgraph = new Graph(rightSubgraphVertexSet, rightSubgraphEdgeSet);
 
         int numLeftSubPartitions = (int) Math.ceil((double) numPartitions / 2);
         int numRightSubPartitions = (int) Math.floor((double) numPartitions / 2);
@@ -409,7 +411,7 @@ public class Application {
 
     private Set<Node> multilevelKL(Graph graph) {
         // run the BFS algorithm several times
-        double balanceFactor = 0.9;
+        double balanceFactor = 0.7;
         int graphSize = graph.getSize();
         int numReps = Math.min(20, graphSize);
         Set<Node> vertexSet = graph.nodeSet();

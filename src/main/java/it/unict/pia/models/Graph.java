@@ -15,6 +15,13 @@ public class Graph {
         this.edgesMap = edgesMap;
     }
 
+    public Graph(Set<Node> nodeSet, Set<Edge> edgeSet) {
+        this.nodesMap = new HashMap<>();
+        this.edgesMap = new HashMap<>();
+        for (Node n : nodeSet) this.nodesMap.put(n.getId(), n);
+        for (Edge e : edgeSet) this.edgesMap.put(e.getId(), e);
+    }
+
     public Graph() {
         this.nodesMap = new HashMap<>();
         this.edgesMap = new HashMap<>();
@@ -32,7 +39,8 @@ public class Graph {
         Set<Edge> neighbourhood = new HashSet<>();
 
         for (Map.Entry<String, Edge> entry : this.edgesMap.entrySet()) {
-            if (entry.getKey().contains(n.getId()))
+            String sourceKey = entry.getKey().split("-")[0];
+            if (n.getId().equals(sourceKey))
                 neighbourhood.add(entry.getValue());
         }
 

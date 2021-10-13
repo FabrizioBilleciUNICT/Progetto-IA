@@ -4,7 +4,7 @@ import math
 
 net = Network()
 nodes = set()
-index = "0"
+index = "6"
 
 with open('../output/' + index + '_output_nodes.csv', mode='r') as csv_file:
     csv_reader = csv.DictReader(csv_file)

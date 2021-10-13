@@ -61,12 +61,7 @@ public class Edge {
             double weight1 = e1.getWeight(); //myGraph.getEdgeWeight(e1);
             double weight2 = e2.getWeight(); //myGraph.getEdgeWeight(e2);
 
-            if(weight1 > weight2)
-                return 1;
-            else if(weight1 < weight2)
-                return -1;
-            else
-                return 0;
+            return Double.compare(weight1, weight2);
         }
     }
 }
