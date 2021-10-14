@@ -20,6 +20,13 @@ public class Node implements Comparable<Node> {
         this.mySubordinates = new HashSet<>();
     }
 
+    public Node(String id, String label, int weight) {
+        this.id = id;
+        this.label = label;
+        this.weight = weight;
+        this.mySubordinates = new HashSet<>();
+    }
+
     public String getId() {
         return id;
     }

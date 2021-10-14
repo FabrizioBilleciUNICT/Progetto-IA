@@ -54,8 +54,52 @@ public class Application {
         this.graphs.add(new Graph(nodesMap, edgesMap));
     }
 
+    private Map<String, Edge> readCSVEdges(String path) throws FileNotFoundException {
+        FileInputStream graphInput = new FileInputStream(path);
+        Scanner scan = new Scanner(graphInput);
+        final Map<String, Edge> edgesMap = new HashMap();
+        boolean header = true;
+        while (scan.hasNextLine()) {
+            String[] line = scan.nextLine().split(",");
+
+            if (header) {
+                header = false;
+                continue;
+            }
+
+            Edge edge = new Edge(line[1], line[2]);
+            edgesMap.put(edge.getId(), edge);
+        }
+        return edgesMap;
+    }
+
+    private Map<String, Node> readCSVNodes(String path) throws FileNotFoundException {
+        FileInputStream graphInput = new FileInputStream(path);
+        Scanner scan = new Scanner(graphInput);
+        final Map<String, Node> nodesMap = new HashMap();
+        boolean header = true;
+        while (scan.hasNextLine()) {
+            String[] line = scan.nextLine().split(",");
+
+            if (header) {
+                header = false;
+                continue;
+            }
+
+            Node node = new Node(line[0], line[1]);
+            nodesMap.put(line[0], node);
+        }
+        return nodesMap;
+    }
+
+    public void readCSVNetwork() throws FileNotFoundException {
+        final Map<String, Node> nodesMap = readCSVNodes("output/test_output_nodes.csv");
+        final Map<String, Edge> edgesMap = readCSVEdges("output/test_output_edges.csv");
+        this.graphs.add(new Graph(nodesMap, edgesMap));
+    }
+
     public Partition annealing() {
-        final int ct = 80; // 60000
+        final int ct = 2; // 60000
 
         final Partition s_0 = createSeedPartition();
         Partition s_star = s_0;
@@ -75,7 +119,9 @@ public class Application {
                 i--;
             }
 
-            if (conductance(s_i, i) < conductance(s_star, i)) {
+            var ci = conductance(s_i, i);
+            var cs = conductance(s_star, i);
+            if (ci < cs) {
                 s_star = s_i;
             }
         }
@@ -156,7 +202,8 @@ public class Application {
 
         // add to the coarse graph vertices which correspond to edges in the matching
         for (Edge curEdge : edgesInMatching) {
-            Node newVertex = new Node(randomString(20), "--"); // curEdge.getId()
+            Node newVertex = new Node(randomString(5), curEdge.getId(), 0); // curEdge.getId()
+            //Node newVertex = new Node(curEdge.getId(), curEdge.getId());
 
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
@@ -174,7 +221,7 @@ public class Application {
         // verticesInMatching now only contains lone vertices,
         // those which weren't assigned a partner in the matching :(
         for (Node curVertex : verticesInMatching) {
-            Node newVertex = new Node(curVertex.getId(), curVertex.getLabel());
+            Node newVertex = new Node(curVertex.getId(), curVertex.getLabel(), 0);
             newVertex.setPartition(s_i.getPartition().get(0).contains(curVertex));
             newVertex.addSubordinate(curVertex);
             coarseGraph.addNode(newVertex);
@@ -188,13 +235,10 @@ public class Application {
             if (parent1 != parent2) {
                 int oldEdgeWeight = this.graphs.get(level).getEdgeWeight(curEdge);
                 Edge edgeInCoarseGraph = coarseGraph.getEdge(parent1, parent2);
-
-                if (edgeInCoarseGraph != null) {
-                    coarseGraph.setEdgeWeight(edgeInCoarseGraph, coarseGraph.getEdgeWeight(edgeInCoarseGraph) + oldEdgeWeight);
-                } else {
-                    edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
-                    coarseGraph.setEdgeWeight(edgeInCoarseGraph, oldEdgeWeight);
-                }
+                var newWeight = oldEdgeWeight;
+                if (edgeInCoarseGraph != null) newWeight += coarseGraph.getEdgeWeight(edgeInCoarseGraph);
+                else edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
+                coarseGraph.setEdgeWeight(edgeInCoarseGraph, newWeight);
             }
         }
 
@@ -356,6 +400,7 @@ public class Application {
         Set<Node> rightSubgraphVertexSet = new HashSet<>(nodeSet);
         for (Node node : leftSubgraphVertexSet) {
             rightSubgraphVertexSet.remove(node);
+            node.setPartition(true);
         }
 
         // swap to make sure left partition is the larger one.
@@ -411,7 +456,7 @@ public class Application {
 
     private Set<Node> multilevelKL(Graph graph) {
         // run the BFS algorithm several times
-        double balanceFactor = 0.7;
+        double balanceFactor = 0.1;
         int graphSize = graph.getSize();
         int numReps = Math.min(20, graphSize);
         Set<Node> vertexSet = graph.nodeSet();
@@ -425,7 +470,7 @@ public class Application {
         Set<Node> minCutPartition = new HashSet<>();
 
         List<Node> startVertexList = new LinkedList<>(vertexSet);
-        Collections.shuffle(startVertexList);
+        //Collections.shuffle(startVertexList);
 
         ListIterator<Node> startVertexIter = startVertexList.listIterator();
 
@@ -442,7 +487,7 @@ public class Application {
             Set<Node> partition = new HashSet<>();
             Set<Node> checked = new HashSet<>();
             LinkedList<Node> unchecked = new LinkedList<>(vertexSet);
-            Collections.shuffle(unchecked);
+            //Collections.shuffle(unchecked);
 
             queue.add(startVertex);
 
