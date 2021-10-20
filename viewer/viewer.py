@@ -2,7 +2,7 @@ from pyvis.network import Network
 import csv
 import math
 
-indices = ["test", "0", "1", "2", "3", "4"]
+indices = ["0", "1", "2", "3", "4", "5", "6"]
 
 for index in indices:
     net = Network()

@@ -11,8 +11,8 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         Application a = new Application("email"); // email | yeast
-        //a.readNetwork();
-        a.readCSVNetwork();
+        a.readNetwork();
+        //a.readCSVNetwork();
         a.annealing();
 
         for (int i = 0; i < a.graphs.size(); i++)

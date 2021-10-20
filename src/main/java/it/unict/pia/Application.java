@@ -99,13 +99,13 @@ public class Application {
     }
 
     public Partition annealing() {
-        final int ct = 2; // 60000
+        final int ct = 100; // 60000
 
         final Partition s_0 = createSeedPartition();
         Partition s_star = s_0;
         Partition s_i = s_0;
         int i = 0; // level
-        for (int k = 0; k < 1; k++) {
+        for (int k = 0; k < 10; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
                 s_i = localRefinement(s_i, i);
@@ -200,6 +200,7 @@ public class Application {
         // now use the matching to construct the coarser graph
         Graph coarseGraph = new Graph();
 
+        int p0 = 0, p1 = 0;
         // add to the coarse graph vertices which correspond to edges in the matching
         for (Edge curEdge : edgesInMatching) {
             Node newVertex = new Node(randomString(5), curEdge.getId(), 0); // curEdge.getId()
@@ -210,7 +211,16 @@ public class Application {
 
             newVertex.addSubordinate(source);
             newVertex.addSubordinate(target);
-            newVertex.setPartition(s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target));
+
+            boolean partition = s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target);
+            // balance factor
+            if (p0 < 10) partition = true;
+            if (p1 < 10) partition = false;
+
+            if (partition) p0++;
+            else p1++;
+            // balance factor
+            newVertex.setPartition(partition);
 
             coarseGraph.addNode(newVertex);
 
