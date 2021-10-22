@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Application {
 
@@ -105,11 +104,10 @@ public class Application {
         Partition s_star = s_0;
         Partition s_i = s_0;
         int i = 0; // level
-        for (int k = 0; k < 10; k++) {
+        for (int k = 0; k < 1; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
                 s_i = localRefinement(s_i, i);
-                System.out.println("Iter: " + i + " partitions: [" + s_i.getPartition().get(0).size() + ", " + s_i.getPartition().get(1).size() + "]");
                 i++;
             }
 
@@ -159,58 +157,48 @@ public class Application {
     }
 
     private Partition solutionGuidedCoarsening(Partition s_i, int level) {
-        //Compute heavy-edge maximal matching.
-        LinkedList<Node> vertexOrder = new LinkedList<>(this.graphs.get(level).nodeSet());
-
-        Collections.shuffle(vertexOrder);
+        LinkedList<Node> nodes = new LinkedList<>(this.graphs.get(level).nodeSet());
+        Collections.shuffle(nodes);
 
         Set<Node> verticesInMatching = new HashSet<>();
         Set<Edge> edgesInMatching = new HashSet<>();
-
         Edge.EdgeComparator edgeComparator = new Edge.EdgeComparator();
 
-        for (Node curVertex : vertexOrder) {
-            curVertex.setPartition(s_i.getPartition().get(0).contains(curVertex));
-
-            if (!verticesInMatching.contains(curVertex)) {
-                verticesInMatching.add(curVertex);
-
-                Set<Edge> curEdges = this.graphs.get(level).edgesOf(curVertex);
+        for (Node curNode : nodes) {
+            curNode.setPartition(s_i.getPartition().get(0).contains(curNode));
+            if (!verticesInMatching.contains(curNode)) {
+                verticesInMatching.add(curNode);
+                Set<Edge> curEdges = this.graphs.get(level).edgesOf(curNode);
                 LinkedList<Edge> curEdgesList = new LinkedList<>(curEdges);
-
                 curEdgesList.sort(edgeComparator);
 
                 for (Edge curEdge : curEdgesList) {
-                    Node neighbourVertex = this.graphs.get(level).getEdgeSource(curEdge);
-
-                    if (neighbourVertex == curVertex) {
-                        neighbourVertex = this.graphs.get(level).getEdgeTarget(curEdge);
+                    Node neighbourNode = this.graphs.get(level).getEdgeSource(curEdge);
+                    if (neighbourNode == curNode) {
+                        neighbourNode = this.graphs.get(level).getEdgeTarget(curEdge);
                     }
 
-                    if (!verticesInMatching.contains(neighbourVertex)) {
-                        // We've found an edge to add to the matching
+                    if (!verticesInMatching.contains(neighbourNode)) {
                         edgesInMatching.add(curEdge);
-                        verticesInMatching.add(neighbourVertex);
+                        verticesInMatching.add(neighbourNode);
                         break;
                     }
                 }
             }
         }
 
-        // now use the matching to construct the coarser graph
         Graph coarseGraph = new Graph();
 
         int p0 = 0, p1 = 0;
-        // add to the coarse graph vertices which correspond to edges in the matching
         for (Edge curEdge : edgesInMatching) {
-            Node newVertex = new Node(randomString(5), curEdge.getId(), 0); // curEdge.getId()
-            //Node newVertex = new Node(curEdge.getId(), curEdge.getId());
+            Node node = new Node(randomString(5), curEdge.getId(), 0); // curEdge.getId()
+            //Node node = new Node(curEdge.getId(), curEdge.getId());
 
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
 
-            newVertex.addSubordinate(source);
-            newVertex.addSubordinate(target);
+            node.addSubordinate(source);
+            node.addSubordinate(target);
 
             boolean partition = s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target);
             // balance factor
@@ -220,24 +208,21 @@ public class Application {
             if (partition) p0++;
             else p1++;
             // balance factor
-            newVertex.setPartition(partition);
+            node.setPartition(partition);
 
-            coarseGraph.addNode(newVertex);
+            coarseGraph.addNode(node);
 
             verticesInMatching.remove(source);
             verticesInMatching.remove(target);
         }
 
-        // verticesInMatching now only contains lone vertices,
-        // those which weren't assigned a partner in the matching :(
-        for (Node curVertex : verticesInMatching) {
-            Node newVertex = new Node(curVertex.getId(), curVertex.getLabel(), 0);
-            newVertex.setPartition(s_i.getPartition().get(0).contains(curVertex));
-            newVertex.addSubordinate(curVertex);
-            coarseGraph.addNode(newVertex);
+        for (Node curNode : verticesInMatching) {
+            Node node = new Node(curNode.getId(), curNode.getLabel(), 0);
+            node.setPartition(s_i.getPartition().get(0).contains(curNode));
+            node.addSubordinate(curNode);
+            coarseGraph.addNode(node);
         }
 
-        // the courseGraph has all the vertices it'll ever get, now it needs the edges
         for (Edge curEdge : this.graphs.get(level).edgeSet()) {
             Node parent1 = this.graphs.get(level).getEdgeSource(curEdge).getParent();
             Node parent2 = this.graphs.get(level).getEdgeTarget(curEdge).getParent();
@@ -275,7 +260,6 @@ public class Application {
             }
             s_i.addPartition(index, newPartition);
         }
-
         //this.graphs.set(--level, unCoarsenGraph);
 
         return s_i;
@@ -294,7 +278,7 @@ public class Application {
         while (belowCount < 5) {
             mv = 0.0;
             for (int i = 0; i < salter; i++) {
-                Node v = getRandomVertexCV(s_i, level);
+                Node v = getRandomNodeCV(s_i, level);
                 if (v == null) break;
 
                 Partition s_p = relocate(s_i, v);
@@ -318,7 +302,7 @@ public class Application {
         return s_best; // s_i1
     }
 
-    private Node getRandomVertexCV(Partition s_i, int level) {
+    private Node getRandomNodeCV(Partition s_i, int level) { // nodes near a cut
         Set<Node> nodes = new HashSet<>();
         for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
             final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
@@ -364,38 +348,20 @@ public class Application {
         }
     }
 
-
-    /**
-     * Takes takes a graph with weighted edges and partitions it into the given number of partitions.
-     * Uses the multi-level Kernighan-Lin heuristic to minimize the weight of the edges between
-     * the partitions (min-cut) while ensuring the sums of the weights of the vertices on each
-     * side of the partition are relatively balanced. Uses a heuristic because this problem is NP-Complete.
-     *
-     * @author Eric Crawford
-     */
     private ArrayList<Set<Node>> partitionGraph(Graph graph, int numPartitions) {
-
         ArrayList<Set<Node>> partitions = new ArrayList<>();
-
         Set<Node> nodeSet = graph.nodeSet();
 
         if (numPartitions < 1) {
             return partitions;
-        } else if (nodeSet.size() <= numPartitions) {
-
-            // In this case there is no point in computing min cut,
-            //just assign each node to a different partition.
+        } else if (numPartitions > nodeSet.size()) {
             Iterator<Node> nodeIter = nodeSet.iterator();
             for (int i = 0; i < numPartitions; i++) {
                 Set<Node> newSet = new HashSet<>();
-
-                if (nodeIter.hasNext()) {
+                if (nodeIter.hasNext())
                     newSet.add(nodeIter.next());
-                }
-
                 partitions.add(newSet);
             }
-
             return partitions;
 
         } else if (numPartitions == 1) {
@@ -403,42 +369,39 @@ public class Application {
             return partitions;
         }
 
-        Set<Node> partition = multilevelKL(graph);
+        Set<Node> partition = createPartition(graph);
         nodeSet = graph.nodeSet();
 
-        Set<Node> leftSubgraphVertexSet = partition;
-        Set<Node> rightSubgraphVertexSet = new HashSet<>(nodeSet);
-        for (Node node : leftSubgraphVertexSet) {
-            rightSubgraphVertexSet.remove(node);
+        Set<Node> leftSubgraphNodeSet = partition;
+        Set<Node> rightSubgraphNodeSet = new HashSet<>(nodeSet);
+        for (Node node : leftSubgraphNodeSet) {
+            rightSubgraphNodeSet.remove(node);
             node.setPartition(true);
         }
 
-        // swap to make sure left partition is the larger one.
-        if (leftSubgraphVertexSet.size() < rightSubgraphVertexSet.size()) {
-            Set<Node> temp = rightSubgraphVertexSet;
-            rightSubgraphVertexSet = leftSubgraphVertexSet;
-            leftSubgraphVertexSet = temp;
+        if (leftSubgraphNodeSet.size() < rightSubgraphNodeSet.size()) {
+            Set<Node> temp = rightSubgraphNodeSet;
+            rightSubgraphNodeSet = leftSubgraphNodeSet;
+            leftSubgraphNodeSet = temp;
         }
 
         if (numPartitions == 2) {
-            partitions.add(leftSubgraphVertexSet);
-            partitions.add(rightSubgraphVertexSet);
+            partitions.add(leftSubgraphNodeSet);
+            partitions.add(rightSubgraphNodeSet);
             return partitions;
         }
 
         Iterator<Edge> edgeIter = graph.edgeSet().iterator();
-
         Set<Edge> leftSubgraphEdgeSet = new HashSet<>();
         Set<Edge> rightSubgraphEdgeSet = new HashSet<>();
 
         while (edgeIter.hasNext()) {
             Edge edge = edgeIter.next();
-
             Node source = graph.getEdgeSource(edge);
             Node target = graph.getEdgeTarget(edge);
 
-            boolean sourceInLeft = leftSubgraphVertexSet.contains(source);
-            boolean targetInLeft = leftSubgraphVertexSet.contains(target);
+            boolean sourceInLeft = leftSubgraphNodeSet.contains(source);
+            boolean targetInLeft = leftSubgraphNodeSet.contains(target);
 
             if (sourceInLeft && targetInLeft) {
                 leftSubgraphEdgeSet.add(edge);
@@ -449,9 +412,8 @@ public class Application {
 
         Graph leftSubgraph, rightSubgraph;
 
-        leftSubgraph = new Graph(leftSubgraphVertexSet, leftSubgraphEdgeSet);
-
-        rightSubgraph = new Graph(rightSubgraphVertexSet, rightSubgraphEdgeSet);
+        leftSubgraph = new Graph(leftSubgraphNodeSet, leftSubgraphEdgeSet);
+        rightSubgraph = new Graph(rightSubgraphNodeSet, rightSubgraphEdgeSet);
 
         int numLeftSubPartitions = (int) Math.ceil((double) numPartitions / 2);
         int numRightSubPartitions = (int) Math.floor((double) numPartitions / 2);
@@ -464,8 +426,7 @@ public class Application {
         return partitions;
     }
 
-    private Set<Node> multilevelKL(Graph graph) {
-        // run the BFS algorithm several times
+    private Set<Node> createPartition(Graph graph) { // BFS
         double balanceFactor = 0.1;
         int graphSize = graph.getSize();
         int numReps = Math.min(20, graphSize);
@@ -479,17 +440,13 @@ public class Application {
         double minCut = Double.POSITIVE_INFINITY;
         Set<Node> minCutPartition = new HashSet<>();
 
-        List<Node> startVertexList = new LinkedList<>(vertexSet);
-        //Collections.shuffle(startVertexList);
-
-        ListIterator<Node> startVertexIter = startVertexList.listIterator();
+        List<Node> startNodesList = new LinkedList<>(vertexSet);
+        Collections.shuffle(startNodesList);
+        ListIterator<Node> startNodeIter = startNodesList.listIterator();
 
         for (int i = 0; i < numReps; i++) {
+            Node startVertex = startNodeIter.next();
 
-            Node startVertex = startVertexIter.next();
-
-            // start with a different random vertex on each rep,
-            // run BFS and see which gives best partition
             double partitionVertexWeight = 0.0;
             double balance = 0.0;
 
@@ -497,7 +454,7 @@ public class Application {
             Set<Node> partition = new HashSet<>();
             Set<Node> checked = new HashSet<>();
             LinkedList<Node> unchecked = new LinkedList<>(vertexSet);
-            //Collections.shuffle(unchecked);
+            Collections.shuffle(unchecked);
 
             queue.add(startVertex);
 
@@ -508,33 +465,23 @@ public class Application {
                 double balanceWithCurrentVertex = (partitionVertexWeight + curVertexWeight) / totalVertexWeight;
                 boolean betterBalance = Math.abs(balanceWithCurrentVertex - 0.5) < Math.abs(balance - 0.5);
 
-                // if adding the current head of the queue to
-                // the partition would give a better balance, then do it
                 if (betterBalance) {
                     partition.add(curVertex);
-
                     partitionVertexWeight += curVertexWeight;
-
                     balance = partitionVertexWeight / totalVertexWeight;
-
                     Set<Node> neighbourhood = getNeighbourhood(graph, curVertex);
-
                     neighbourhood.removeAll(checked);
-
                     queue.addAll(neighbourhood);
                 }
 
                 checked.add(curVertex);
                 unchecked.remove(curVertex);
 
-                // if the queue is empty but we don't yet have a good balance, randomly choose a vertex
-                // we haven't visited yet and start from there (still on the same rep)
                 if (queue.isEmpty() && !unchecked.isEmpty() && (Math.abs(balance - 0.5) > balanceFactor)) {
                     queue.add(unchecked.get(0));
                 }
             }
 
-            // find the cut value of the partition found on this rep
             double cutValue = 0.0;
             for (Edge curEdge : graph.edgeSet()) {
                 Node source = graph.getEdgeSource(curEdge);
@@ -548,7 +495,6 @@ public class Application {
                 }
             }
 
-            // compare current partition to the best so far, as long as current partition has decent balance
             if (Math.abs(balance - 0.5) < balanceFactor) {
                 if (cutValue < minCut) {
                     minCut = cutValue;
@@ -561,13 +507,7 @@ public class Application {
     }
 
 
-    /**
-     * Find the vertices in the neighbourhood of given vertex in a given graph.
-     *
-     * @author Eric Crawford
-     */
     private Set<Node> getNeighbourhood(Graph graph, Node vertex) {
-
         Set<Edge> edgeSet = graph.edgesOf(vertex);
         Set<Node> neighbourhood = new HashSet<>();
 
