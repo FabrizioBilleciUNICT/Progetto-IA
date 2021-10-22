@@ -202,11 +202,11 @@ public class Application {
 
             boolean partition = s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target);
             // balance factor
-            if (p0 < 10) partition = true;
-            if (p1 < 10) partition = false;
+            //if (p0 < 10) partition = true;
+            //if (p1 < 10) partition = false;
 
-            if (partition) p0++;
-            else p1++;
+            //if (partition) p0++;
+            //else p1++;
             // balance factor
             node.setPartition(partition);
 
