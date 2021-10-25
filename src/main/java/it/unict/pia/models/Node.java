@@ -8,23 +8,23 @@ public class Node implements Comparable<Node> {
     private String id;
     private String label;
     private int weight;
-    private boolean partition; // true = P0, false = P1
+    private int partition; // true = P0, false = P1
 
-    Set<Node> mySubordinates;
-    Node myParent;
+    Set<Node> subordinates;
+    Node parent;
 
     public Node(String id, String label) {
         this.id = id;
         this.label = label;
         this.weight = 1;
-        this.mySubordinates = new HashSet<>();
+        this.subordinates = new HashSet<>();
     }
 
     public Node(String id, String label, int weight) {
         this.id = id;
         this.label = label;
         this.weight = weight;
-        this.mySubordinates = new HashSet<>();
+        this.subordinates = new HashSet<>();
     }
 
     public String getId() {
@@ -56,32 +56,36 @@ public class Node implements Comparable<Node> {
         return 0;
     }
 
-    public boolean isPartitionP0() {
-        return partition;
+    public boolean isPartition(int partition) {
+        return this.partition == partition;
     }
 
-    public void setPartition(boolean partition) {
+    public void setPartition(int partition) {
         this.partition = partition;
-        if (this.mySubordinates != null) {
-            this.mySubordinates.forEach(s -> s.setPartition(this.partition));
+        if (this.subordinates != null) {
+            this.subordinates.forEach(s -> s.setPartition(this.partition));
         }
+    }
+
+    public int getPartition() {
+        return partition;
     }
 
     public void addSubordinate(Node sub){
         sub.setParent(this);
-        mySubordinates.add(sub);
+        subordinates.add(sub);
         this.weight += sub.getWeight();
     }
 
     public Set<Node> getSubordinates(){
-        return mySubordinates;
+        return subordinates;
     }
 
     public Node getParent() {
-        return myParent;
+        return parent;
     }
 
     public void setParent(Node parent) {
-        this.myParent = parent;
+        this.parent = parent;
     }
 }

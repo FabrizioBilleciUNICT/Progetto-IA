@@ -16,16 +16,18 @@ public class Partition {
 
     public Partition(Graph graph) {
         this.partition = new ArrayList<>();
-        Set<Node> nodeSetP0 = new HashSet<>(); // graph.nodeSet();
-        Set<Node> nodeSetP1 = new HashSet<>(); // graph.nodeSet();
+
+        Map<Integer, Set<Node>> mapPartition = new HashMap<>();
 
         for (Map.Entry<String, Node> entry : graph.getNodesMap().entrySet()) {
-            if (entry.getValue().isPartitionP0()) nodeSetP0.add(entry.getValue());
-            else nodeSetP1.add(entry.getValue());
+            int p = entry.getValue().getPartition();
+            if (!mapPartition.containsKey(p)) mapPartition.put(p, new HashSet<>());
+            mapPartition.get(p).add(entry.getValue());
         }
 
-        this.partition.add(nodeSetP0);
-        this.partition.add(nodeSetP1);
+        for (Map.Entry<Integer, Set<Node>> partition : mapPartition.entrySet()) {
+            this.partition.add(partition.getValue());
+        }
     }
 
     public ArrayList<Set<Node>> getPartition() {
@@ -36,14 +38,13 @@ public class Partition {
         this.partition = partition;
     }
 
-    public void relocateNode(Node n) {
-        if (this.partition.get(0).contains(n)) {  // P0 --> P1
-            this.partition.get(1).add(n);
-            this.partition.get(0).remove(n);
-        } else {                    // P1 --> P0
-            this.partition.get(0).add(n);
-            this.partition.get(1).remove(n);
-        }
+    public void relocateNode(Node n, int partitionTo) {
+        final int partitionFrom = n.getPartition();
+        this.partition.get(partitionFrom).remove(n);
+
+        n.setPartition(partitionTo);
+        this.partition.get(partitionTo).add(n);
+
     }
 
     public void addPartition(int index, Set<Node> nodes) {

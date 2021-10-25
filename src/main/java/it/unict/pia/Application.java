@@ -9,7 +9,6 @@ import java.util.*;
 
 public class Application {
 
-    //private Graph graph;
     public Stack<Graph> graphs = new Stack<>();
     private final String network;
 
@@ -128,7 +127,11 @@ public class Application {
     }
 
     private Partition createSeedPartition() {
-        return new Partition(partitionGraph(this.graphs.get(0), 2));
+        int partition = 0;
+        for (Map.Entry<String, Node> entry : this.graphs.get(0).getNodesMap().entrySet())
+            entry.getValue().setPartition(partition++);
+
+        return new Partition(this.graphs.get(0));
     }
 
     private double conductance(Partition s_i, int level) {
@@ -165,7 +168,7 @@ public class Application {
         Edge.EdgeComparator edgeComparator = new Edge.EdgeComparator();
 
         for (Node curNode : nodes) {
-            curNode.setPartition(s_i.getPartition().get(0).contains(curNode));
+            // curNode.setPartition(s_i.getPartition().get(0).contains(curNode));
             if (!verticesInMatching.contains(curNode)) {
                 verticesInMatching.add(curNode);
                 Set<Edge> curEdges = this.graphs.get(level).edgesOf(curNode);
@@ -189,36 +192,32 @@ public class Application {
 
         Graph coarseGraph = new Graph();
 
-        int p0 = 0, p1 = 0;
         for (Edge curEdge : edgesInMatching) {
-            Node node = new Node(randomString(5), curEdge.getId(), 0); // curEdge.getId()
-            //Node node = new Node(curEdge.getId(), curEdge.getId());
-
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
 
-            node.addSubordinate(source);
-            node.addSubordinate(target);
+            if (source.isPartition(target.getPartition())) { // pure partitions
+                Node node = new Node(randomString(5), curEdge.getId(), 0);
+                node.addSubordinate(source);
+                node.addSubordinate(target);
+                node.setPartition(source.getPartition());
 
-            boolean partition = s_i.getPartition().get(0).contains(source) && s_i.getPartition().get(0).contains(target);
-            // balance factor
-            //if (p0 < 10) partition = true;
-            //if (p1 < 10) partition = false;
+                coarseGraph.addNode(node);
+                verticesInMatching.remove(source);
+                verticesInMatching.remove(target);
+            } else { // p(source) != p(target)
 
-            //if (partition) p0++;
-            //else p1++;
-            // balance factor
-            node.setPartition(partition);
-
-            coarseGraph.addNode(node);
-
-            verticesInMatching.remove(source);
-            verticesInMatching.remove(target);
+                // nodo 0: d_p1 = 1, d_p2 = 1, ..    y(1) <-- x(0) --> z(2), k(2)
+                // d_x = 3
+                // d_x_p1 = 1
+                // d_x_p2 = 2
+                // 2/3 superiore ad una certa soglia, si fa ugualmente il coarsening
+            }
         }
 
         for (Node curNode : verticesInMatching) {
             Node node = new Node(curNode.getId(), curNode.getLabel(), 0);
-            node.setPartition(s_i.getPartition().get(0).contains(curNode));
+            node.setPartition(curNode.getPartition());
             node.addSubordinate(curNode);
             coarseGraph.addNode(node);
         }
@@ -254,7 +253,7 @@ public class Application {
                 Set<Node> contractedNodes = node.getSubordinates();
                 newPartition.addAll(contractedNodes);
                 for (Node nc : contractedNodes) {
-                    nc.setPartition(index == 0);
+                    nc.setPartition(index);
                     this.graphs.get(level-1).getNodesMap().put(nc.getId(), nc);
                 }
             }
@@ -280,8 +279,14 @@ public class Application {
             for (int i = 0; i < salter; i++) {
                 Node v = getRandomNodeCV(s_i, level);
                 if (v == null) break;
+                /**
+                 * 1. Prendere un nodo random dal CV
+                 * 2. Calcolare la modularità assegnando al nodo ogni partizione disponibile
+                 * 3. Massimizzare la modularità: trovare la partizione assegnata al nodo che massimizza la mod.
+                 * 4. Assegnare la partizione al nodo
+                 */
 
-                Partition s_p = relocate(s_i, v);
+                Partition s_p = null;//relocate(s_i, v);
                 final int d = delta(s_p, v, level);
                 if (d < 0 || canRelocate(T, d)) {
                     s_i = s_p;
@@ -308,10 +313,9 @@ public class Application {
             final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
             final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
-            if ((s_i.getPartition().get(0).contains(nodeSource) && s_i.getPartition().get(1).contains(nodeTarget)) || (s_i.getPartition().get(1).contains(nodeSource) && s_i.getPartition().get(0).contains(nodeTarget))) {
+            if (!nodeSource.isPartition(nodeTarget.getPartition()))
                 nodes.add(nodeSource);
                 nodes.add(nodeTarget);
-            }
         }
 
         Node[] arr = nodes.toArray(Node[]::new);
@@ -319,10 +323,13 @@ public class Application {
         else return null;
     }
 
-    private Partition relocate(Partition s_i, Node v) {
+    private Partition relocate(Partition s_i, Node v, Node u) {
         Partition s_i1 = new Partition();
-        s_i1.setPartition(new ArrayList<>(Set.of(s_i.getPartition().get(0), s_i.getPartition().get(1))));
-        s_i1.relocateNode(v);
+        s_i1.setPartition(new ArrayList<>(s_i.getPartition()));
+
+        if (new Random().nextInt(2) == 0) s_i1.relocateNode(v, u.getPartition());
+        else s_i1.relocateNode(u, v.getPartition());
+
         return s_i1;
     }
 
@@ -347,183 +354,6 @@ public class Application {
             return prob > 0.5;
         }
     }
-
-    private ArrayList<Set<Node>> partitionGraph(Graph graph, int numPartitions) {
-        ArrayList<Set<Node>> partitions = new ArrayList<>();
-        Set<Node> nodeSet = graph.nodeSet();
-
-        if (numPartitions < 1) {
-            return partitions;
-        } else if (numPartitions > nodeSet.size()) {
-            Iterator<Node> nodeIter = nodeSet.iterator();
-            for (int i = 0; i < numPartitions; i++) {
-                Set<Node> newSet = new HashSet<>();
-                if (nodeIter.hasNext())
-                    newSet.add(nodeIter.next());
-                partitions.add(newSet);
-            }
-            return partitions;
-
-        } else if (numPartitions == 1) {
-            partitions.add(nodeSet);
-            return partitions;
-        }
-
-        Set<Node> partition = createPartition(graph);
-        nodeSet = graph.nodeSet();
-
-        Set<Node> leftSubgraphNodeSet = partition;
-        Set<Node> rightSubgraphNodeSet = new HashSet<>(nodeSet);
-        for (Node node : leftSubgraphNodeSet) {
-            rightSubgraphNodeSet.remove(node);
-            node.setPartition(true);
-        }
-
-        if (leftSubgraphNodeSet.size() < rightSubgraphNodeSet.size()) {
-            Set<Node> temp = rightSubgraphNodeSet;
-            rightSubgraphNodeSet = leftSubgraphNodeSet;
-            leftSubgraphNodeSet = temp;
-        }
-
-        if (numPartitions == 2) {
-            partitions.add(leftSubgraphNodeSet);
-            partitions.add(rightSubgraphNodeSet);
-            return partitions;
-        }
-
-        Iterator<Edge> edgeIter = graph.edgeSet().iterator();
-        Set<Edge> leftSubgraphEdgeSet = new HashSet<>();
-        Set<Edge> rightSubgraphEdgeSet = new HashSet<>();
-
-        while (edgeIter.hasNext()) {
-            Edge edge = edgeIter.next();
-            Node source = graph.getEdgeSource(edge);
-            Node target = graph.getEdgeTarget(edge);
-
-            boolean sourceInLeft = leftSubgraphNodeSet.contains(source);
-            boolean targetInLeft = leftSubgraphNodeSet.contains(target);
-
-            if (sourceInLeft && targetInLeft) {
-                leftSubgraphEdgeSet.add(edge);
-            } else if (!sourceInLeft && !targetInLeft) {
-                rightSubgraphEdgeSet.add(edge);
-            }
-        }
-
-        Graph leftSubgraph, rightSubgraph;
-
-        leftSubgraph = new Graph(leftSubgraphNodeSet, leftSubgraphEdgeSet);
-        rightSubgraph = new Graph(rightSubgraphNodeSet, rightSubgraphEdgeSet);
-
-        int numLeftSubPartitions = (int) Math.ceil((double) numPartitions / 2);
-        int numRightSubPartitions = (int) Math.floor((double) numPartitions / 2);
-
-        ArrayList<Set<Node>> leftPartitions = partitionGraph(leftSubgraph, numLeftSubPartitions);
-        ArrayList<Set<Node>> rightPartitions = partitionGraph(rightSubgraph, numRightSubPartitions);
-
-        partitions.addAll(leftPartitions);
-        partitions.addAll(rightPartitions);
-        return partitions;
-    }
-
-    private Set<Node> createPartition(Graph graph) { // BFS
-        double balanceFactor = 0.1;
-        int graphSize = graph.getSize();
-        int numReps = Math.min(20, graphSize);
-        Set<Node> vertexSet = graph.nodeSet();
-
-        double totalVertexWeight = 0;
-        for (Node v : vertexSet) {
-            totalVertexWeight += v.getWeight();
-        }
-
-        double minCut = Double.POSITIVE_INFINITY;
-        Set<Node> minCutPartition = new HashSet<>();
-
-        List<Node> startNodesList = new LinkedList<>(vertexSet);
-        Collections.shuffle(startNodesList);
-        ListIterator<Node> startNodeIter = startNodesList.listIterator();
-
-        for (int i = 0; i < numReps; i++) {
-            Node startVertex = startNodeIter.next();
-
-            double partitionVertexWeight = 0.0;
-            double balance = 0.0;
-
-            PriorityQueue<Node> queue = new PriorityQueue<>();
-            Set<Node> partition = new HashSet<>();
-            Set<Node> checked = new HashSet<>();
-            LinkedList<Node> unchecked = new LinkedList<>(vertexSet);
-            Collections.shuffle(unchecked);
-
-            queue.add(startVertex);
-
-            while (!queue.isEmpty() && balance < 0.5) {
-                Node curVertex = queue.poll();
-                double curVertexWeight = curVertex.getWeight();
-
-                double balanceWithCurrentVertex = (partitionVertexWeight + curVertexWeight) / totalVertexWeight;
-                boolean betterBalance = Math.abs(balanceWithCurrentVertex - 0.5) < Math.abs(balance - 0.5);
-
-                if (betterBalance) {
-                    partition.add(curVertex);
-                    partitionVertexWeight += curVertexWeight;
-                    balance = partitionVertexWeight / totalVertexWeight;
-                    Set<Node> neighbourhood = getNeighbourhood(graph, curVertex);
-                    neighbourhood.removeAll(checked);
-                    queue.addAll(neighbourhood);
-                }
-
-                checked.add(curVertex);
-                unchecked.remove(curVertex);
-
-                if (queue.isEmpty() && !unchecked.isEmpty() && (Math.abs(balance - 0.5) > balanceFactor)) {
-                    queue.add(unchecked.get(0));
-                }
-            }
-
-            double cutValue = 0.0;
-            for (Edge curEdge : graph.edgeSet()) {
-                Node source = graph.getEdgeSource(curEdge);
-                Node target = graph.getEdgeTarget(curEdge);
-
-                boolean sourceInPartition = partition.contains(source);
-                boolean targetInPartition = partition.contains(target);
-
-                if (sourceInPartition != targetInPartition) {
-                    cutValue += curEdge.getWeight(); // graph.getEdgeWeight(curEdge);
-                }
-            }
-
-            if (Math.abs(balance - 0.5) < balanceFactor) {
-                if (cutValue < minCut) {
-                    minCut = cutValue;
-                    minCutPartition = partition;
-                }
-            }
-        }
-
-        return minCutPartition;
-    }
-
-
-    private Set<Node> getNeighbourhood(Graph graph, Node vertex) {
-        Set<Edge> edgeSet = graph.edgesOf(vertex);
-        Set<Node> neighbourhood = new HashSet<>();
-
-        for (Edge curEdge : edgeSet) {
-            Node neighbour = graph.getEdgeSource(curEdge);
-
-            if (neighbour == vertex) {
-                neighbour = graph.getEdgeTarget(curEdge);
-            }
-
-            neighbourhood.add(neighbour);
-        }
-
-        return neighbourhood;
-    }
-
 
     static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     static SecureRandom rnd = new SecureRandom();
