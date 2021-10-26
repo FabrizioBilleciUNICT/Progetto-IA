@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Application {
 
@@ -20,8 +21,8 @@ public class Application {
         FileInputStream graphInput = new FileInputStream("networks/" + network + "/" + network + ".gml");
         Scanner scan = new Scanner(graphInput);
 
-        final Map<String, Node> nodesMap = new HashMap();
-        final Map<String, Edge> edgesMap = new HashMap();
+        final Map<String, Node> nodesMap = new HashMap<>();
+        final Map<String, Edge> edgesMap = new HashMap<>();
 
         int count = 0;
         while (scan.hasNextLine()) {
@@ -91,13 +92,13 @@ public class Application {
     }
 
     public void readCSVNetwork() throws FileNotFoundException {
-        final Map<String, Node> nodesMap = readCSVNodes("output/test_output_nodes.csv");
-        final Map<String, Edge> edgesMap = readCSVEdges("output/test_output_edges.csv");
+        final Map<String, Node> nodesMap = readCSVNodes("networks/test0/test_output_nodes.csv");
+        final Map<String, Edge> edgesMap = readCSVEdges("networks/test0/test_output_edges.csv");
         this.graphs.add(new Graph(nodesMap, edgesMap));
     }
 
     public Partition annealing() {
-        final int ct = 100; // 60000
+        final int ct = this.graphs.get(0).getSize() / 4; // 60000
 
         final Partition s_0 = createSeedPartition();
         Partition s_star = s_0;
@@ -106,13 +107,13 @@ public class Application {
         for (int k = 0; k < 1; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
-                s_i = localRefinement(s_i, i);
+                s_i = setBestPartition(s_i, i);
                 i++;
             }
 
             while (i > 0) {
                 s_i = unCoarsening(s_i, i);
-                s_i = localRefinement(s_i, i);
+                s_i = setBestPartition(s_i, i);
                 i--;
             }
 
@@ -264,47 +265,82 @@ public class Application {
         return s_i;
     }
 
-    private Partition localRefinement(Partition s_i, int level) {
-        final double T0 = (1.0 + 1e-20) / 2.0;
-        double T = T0;
-        final double salter = 200.0; //200000.0;
-        final double ar = 0.05;
-        final double theta = 0.98;
+    /**
+     * 1. Prendere un nodo random dal CV
+     * 2. Calcolare la modularità assegnando al nodo ogni partizione disponibile --> partizioni "vicine"
+     * 3. Massimizzare la modularità: trovare la partizione assegnata al nodo che massimizza la mod.
+     * 4. Assegnare la partizione al nodo
+     */
+    private Partition setBestPartition(Partition s_i, int level) {
+        Partition s_best = new Partition();
+        s_best.setPartition(new ArrayList<>(s_i.getPartition()));
 
-        Partition s_best = s_i;
-        double mv = 0.0;
-        int belowCount = 0;
-        while (belowCount < 5) {
-            mv = 0.0;
-            for (int i = 0; i < salter; i++) {
-                Node v = getRandomNodeCV(s_i, level);
-                if (v == null) break;
-                /**
-                 * 1. Prendere un nodo random dal CV
-                 * 2. Calcolare la modularità assegnando al nodo ogni partizione disponibile
-                 * 3. Massimizzare la modularità: trovare la partizione assegnata al nodo che massimizza la mod.
-                 * 4. Assegnare la partizione al nodo
-                 */
+        final int salter = 200;
+        for (int i = 0; i < salter; i++) {
+            Node v = getRandomNodeCV(s_i, level);
+            if (v == null) break;
 
-                Partition s_p = null;//relocate(s_i, v);
-                final int d = delta(s_p, v, level);
-                if (d < 0 || canRelocate(T, d)) {
-                    s_i = s_p;
-                    mv++;
-                }
+            Set<Edge> edges = this.graphs.get(level).edgesOf(v);
+            Map<Integer, Double> qMap = new HashMap<>();
+            for (Edge e : edges) {
+                Node source = this.graphs.get(level).getNodesMap().get(e.getSource());
+                Node target = this.graphs.get(level).getNodesMap().get(e.getTarget());
 
-                if (conductance(s_i, level) < conductance(s_best, level)) {
-                    s_best = s_i;
+                Partition s_p = new Partition();
+                s_p.setPartition(new ArrayList<>(s_i.getPartition()));
+
+                if (v.getId().equals(e.getSource())) {
+                    if (!v.isPartition(target.getPartition())) { // prova a spostare v nella partizione target
+                        s_p.relocateNode(v, target.getPartition());
+                        qMap.put(target.getPartition(), getQ(s_p, level));
+                    }
+                } else if (v.getId().equals(e.getTarget())) {
+                    if (!v.isPartition(source.getPartition())) { // prova a spostare v nella partizione source
+                        s_p.relocateNode(v, source.getPartition());
+                        qMap.put(source.getPartition(), getQ(s_p, level));
+                    }
                 }
             }
 
-            T = T * theta;
+            int bestP = 0;
+            double bestQ = -1.0;
+            for (Map.Entry<Integer, Double> partitions : qMap.entrySet()) {
+                if (partitions.getValue() > bestQ) {
+                    bestQ = partitions.getValue();
+                    bestP = partitions.getKey();
+                }
+            }
 
-            if ((mv / salter) < ar) belowCount++;
-            else belowCount = 0;
+            s_best.relocateNode(v, bestP);
         }
 
-        return s_best; // s_i1
+        return s_best;
+    }
+
+    private double getQ(Partition s_i, int level) {
+        final int M = this.graphs.get(level).getEdgesMap().size();
+        double q = 0.0;
+
+        for (int index = 0; index < s_i.getPartition().size(); index++) {
+            int l_i = 0;
+            int d_i = 0;
+            Set<Node> partition = s_i.getPartition().get(index);
+            Set<String> partitionKeys = s_i.getPartition().get(index).stream().map(Node::getId).collect(Collectors.toSet());
+
+            for (Node n : partition) {
+                Set<Edge> curEdges = this.graphs.get(level).edgesOf(n);
+                d_i += curEdges.size();
+
+                Set<Edge> linkEdges = curEdges.stream().filter(e ->
+                        partitionKeys.contains(e.getSource()) && partitionKeys.contains(e.getTarget())
+                ).collect(Collectors.toSet());
+                l_i += linkEdges.size();
+            }
+
+            q += (l_i / (M * 1.0)) - Math.pow((d_i / 2.0 * M), 2);
+        }
+
+        return q;
     }
 
     private Node getRandomNodeCV(Partition s_i, int level) { // nodes near a cut

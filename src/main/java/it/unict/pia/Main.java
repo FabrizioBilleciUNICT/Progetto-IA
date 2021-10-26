@@ -11,8 +11,8 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         Application a = new Application("email"); // email | yeast
-        a.readNetwork();
-        //a.readCSVNetwork();
+        //a.readNetwork();
+        a.readCSVNetwork();
         a.annealing();
 
         for (int i = 0; i < a.graphs.size(); i++)
@@ -24,7 +24,7 @@ public class Main {
         sb.append("id,label,weight,partition").append("\n");
         for (var n : graph.getNodesMap().entrySet()) {
             Node v = n.getValue();
-            sb.append(n.getKey()).append(",").append(v.getLabel()).append(",").append(v.getWeight()).append(",").append(v.isPartitionP0() ? "0" : "1");
+            sb.append(n.getKey()).append(",").append(v.getLabel()).append(",").append(v.getWeight()).append(",").append(v.getPartition());
             sb.append("\n");
         }
         saveToFile("output/" + index + "_output_nodes.csv", sb);
