@@ -39,8 +39,8 @@ public class Graph {
         Set<Edge> neighbourhood = new HashSet<>();
 
         for (Map.Entry<String, Edge> entry : this.edgesMap.entrySet()) {
-            String sourceKey = entry.getKey().split("-")[0];
-            if (n.getId().equals(sourceKey))
+            String[] keys = entry.getKey().split("-");
+            if (n.getId().equals(keys[0]) || n.getId().equals(keys[1]))
                 neighbourhood.add(entry.getValue());
         }
 

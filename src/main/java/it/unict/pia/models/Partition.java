@@ -1,6 +1,7 @@
 package it.unict.pia.models;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Partition {
 
@@ -38,17 +39,26 @@ public class Partition {
         this.partition = partition;
     }
 
-    public void relocateNode(Node n, int partitionTo) {
-        final int partitionFrom = n.getPartition();
-        this.partition.get(partitionFrom).remove(n);
+    public void relocateNode(Node n, int partitionFrom, int partitionTo) {
+        this.partition.set(partitionFrom, this.partition.get(partitionFrom)
+                .stream()
+                .filter(x -> !x.getId().equals(n.getId()))
+                .collect(Collectors.toSet())
+        );
 
         n.setPartition(partitionTo);
         this.partition.get(partitionTo).add(n);
-
     }
 
     public void addPartition(int index, Set<Node> nodes) {
         if (this.partition.size() > index) this.partition.set(index, nodes);
         else this.partition.add(nodes);
+    }
+
+    public static Partition copyOf(Partition p) {
+        ArrayList<Set<Node>> partition = new ArrayList<>();
+        p.getPartition().forEach(x -> partition.add(new HashSet<>(x)));
+
+        return new Partition(partition);
     }
 }

@@ -192,6 +192,7 @@ public class Application {
         }
 
         Graph coarseGraph = new Graph();
+        final double dt = 0.5;
 
         for (Edge curEdge : edgesInMatching) {
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
@@ -272,13 +273,16 @@ public class Application {
      * 4. Assegnare la partizione al nodo
      */
     private Partition setBestPartition(Partition s_i, int level) {
-        Partition s_best = new Partition();
-        s_best.setPartition(new ArrayList<>(s_i.getPartition()));
+        //if (s_i.getPartition().size() >= this.graphs.get(level).getSize())
+        //    return s_i;
+
+        Partition s_best = Partition.copyOf(s_i);
 
         final int salter = 200;
         for (int i = 0; i < salter; i++) {
             Node v = getRandomNodeCV(s_i, level);
             if (v == null) break;
+            final int partitionFrom = v.getPartition();
 
             Set<Edge> edges = this.graphs.get(level).edgesOf(v);
             Map<Integer, Double> qMap = new HashMap<>();
@@ -286,17 +290,16 @@ public class Application {
                 Node source = this.graphs.get(level).getNodesMap().get(e.getSource());
                 Node target = this.graphs.get(level).getNodesMap().get(e.getTarget());
 
-                Partition s_p = new Partition();
-                s_p.setPartition(new ArrayList<>(s_i.getPartition()));
+                Partition s_p = Partition.copyOf(s_i);
 
                 if (v.getId().equals(e.getSource())) {
                     if (!v.isPartition(target.getPartition())) { // prova a spostare v nella partizione target
-                        s_p.relocateNode(v, target.getPartition());
+                        s_p.relocateNode(v, partitionFrom, target.getPartition());
                         qMap.put(target.getPartition(), getQ(s_p, level));
                     }
                 } else if (v.getId().equals(e.getTarget())) {
                     if (!v.isPartition(source.getPartition())) { // prova a spostare v nella partizione source
-                        s_p.relocateNode(v, source.getPartition());
+                        s_p.relocateNode(v, partitionFrom, source.getPartition());
                         qMap.put(source.getPartition(), getQ(s_p, level));
                     }
                 }
@@ -311,7 +314,7 @@ public class Application {
                 }
             }
 
-            s_best.relocateNode(v, bestP);
+            s_best.relocateNode(v, partitionFrom, bestP);
         }
 
         return s_best;
@@ -337,7 +340,11 @@ public class Application {
                 l_i += linkEdges.size();
             }
 
-            q += (l_i / (M * 1.0)) - Math.pow((d_i / 2.0 * M), 2);
+            //if (l_i > 0)
+            var __x = (l_i / (M * 1.0));
+            var __y = Math.pow(d_i / (2.0 * M), 2);
+
+            q += __x - __y;
         }
 
         return q;
@@ -363,8 +370,8 @@ public class Application {
         Partition s_i1 = new Partition();
         s_i1.setPartition(new ArrayList<>(s_i.getPartition()));
 
-        if (new Random().nextInt(2) == 0) s_i1.relocateNode(v, u.getPartition());
-        else s_i1.relocateNode(u, v.getPartition());
+        if (new Random().nextInt(2) == 0) s_i1.relocateNode(v, v.getPartition(), u.getPartition());
+        else s_i1.relocateNode(u, u.getPartition(), v.getPartition());
 
         return s_i1;
     }

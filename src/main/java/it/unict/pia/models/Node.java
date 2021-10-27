@@ -56,6 +56,13 @@ public class Node implements Comparable<Node> {
         return 0;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) return false;
+
+        return ((Node)o).getId().equals(this.id);
+    }
+
     public boolean isPartition(int partition) {
         return this.partition == partition;
     }
