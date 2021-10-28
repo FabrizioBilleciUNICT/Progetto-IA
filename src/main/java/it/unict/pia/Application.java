@@ -107,7 +107,7 @@ public class Application {
         for (int k = 0; k < 1; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
-                s_i = setBestPartition(s_i, i);
+                s_i = setBestPartition(s_i, i+1);
                 i++;
             }
 
@@ -271,18 +271,22 @@ public class Application {
      * 2. Calcolare la modularità assegnando al nodo ogni partizione disponibile --> partizioni "vicine"
      * 3. Massimizzare la modularità: trovare la partizione assegnata al nodo che massimizza la mod.
      * 4. Assegnare la partizione al nodo
+     *
+     * TODO: salvare nel nodo il valore dei link interni così che questa informazione venga utilizzata nel calcolo di Q
      */
     private Partition setBestPartition(Partition s_i, int level) {
-        //if (s_i.getPartition().size() >= this.graphs.get(level).getSize())
-        //    return s_i;
-
+        Modularity mod = new Modularity(this.graphs.get(level), level);
+        mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
 
-        final int salter = 200;
+        final int salter = 1;
         for (int i = 0; i < salter; i++) {
             Node v = getRandomNodeCV(s_i, level);
             if (v == null) break;
             final int partitionFrom = v.getPartition();
+            final Set<Node> neighbours = this.graphs.get(level).adjOf(v);
+            int bestP = partitionFrom;
+            double bestQ = mod.getQ();
 
             Set<Edge> edges = this.graphs.get(level).edgesOf(v);
             Map<Integer, Double> qMap = new HashMap<>();
@@ -290,23 +294,17 @@ public class Application {
                 Node source = this.graphs.get(level).getNodesMap().get(e.getSource());
                 Node target = this.graphs.get(level).getNodesMap().get(e.getTarget());
 
-                Partition s_p = Partition.copyOf(s_i);
-
                 if (v.getId().equals(e.getSource())) {
                     if (!v.isPartition(target.getPartition())) { // prova a spostare v nella partizione target
-                        s_p.relocateNode(v, partitionFrom, target.getPartition());
-                        qMap.put(target.getPartition(), getQ(s_p, level));
+                        qMap.put(target.getPartition(), mod.updateQ(neighbours, partitionFrom, target.getPartition()));
                     }
                 } else if (v.getId().equals(e.getTarget())) {
                     if (!v.isPartition(source.getPartition())) { // prova a spostare v nella partizione source
-                        s_p.relocateNode(v, partitionFrom, source.getPartition());
-                        qMap.put(source.getPartition(), getQ(s_p, level));
+                        qMap.put(source.getPartition(), mod.updateQ(neighbours, partitionFrom, target.getPartition()));
                     }
                 }
             }
 
-            int bestP = 0;
-            double bestQ = -1.0;
             for (Map.Entry<Integer, Double> partitions : qMap.entrySet()) {
                 if (partitions.getValue() > bestQ) {
                     bestQ = partitions.getValue();
@@ -314,40 +312,15 @@ public class Application {
                 }
             }
 
+            System.out.println(bestQ);
+
             s_best.relocateNode(v, partitionFrom, bestP);
+            mod.relocateNode(v, partitionFrom, bestP);
+
+            this.graphs.get(level).getNodesMap().get(v.getId()).setPartition(bestP);
         }
 
         return s_best;
-    }
-
-    private double getQ(Partition s_i, int level) {
-        final int M = this.graphs.get(level).getEdgesMap().size();
-        double q = 0.0;
-
-        for (int index = 0; index < s_i.getPartition().size(); index++) {
-            int l_i = 0;
-            int d_i = 0;
-            Set<Node> partition = s_i.getPartition().get(index);
-            Set<String> partitionKeys = s_i.getPartition().get(index).stream().map(Node::getId).collect(Collectors.toSet());
-
-            for (Node n : partition) {
-                Set<Edge> curEdges = this.graphs.get(level).edgesOf(n);
-                d_i += curEdges.size();
-
-                Set<Edge> linkEdges = curEdges.stream().filter(e ->
-                        partitionKeys.contains(e.getSource()) && partitionKeys.contains(e.getTarget())
-                ).collect(Collectors.toSet());
-                l_i += linkEdges.size();
-            }
-
-            //if (l_i > 0)
-            var __x = (l_i / (M * 1.0));
-            var __y = Math.pow(d_i / (2.0 * M), 2);
-
-            q += __x - __y;
-        }
-
-        return q;
     }
 
     private Node getRandomNodeCV(Partition s_i, int level) { // nodes near a cut
@@ -356,9 +329,10 @@ public class Application {
             final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
             final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
 
-            if (!nodeSource.isPartition(nodeTarget.getPartition()))
+            if (!nodeSource.isPartition(nodeTarget.getPartition())) {
                 nodes.add(nodeSource);
                 nodes.add(nodeTarget);
+            }
         }
 
         Node[] arr = nodes.toArray(Node[]::new);

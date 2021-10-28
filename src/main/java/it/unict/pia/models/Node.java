@@ -69,9 +69,9 @@ public class Node implements Comparable<Node> {
 
     public void setPartition(int partition) {
         this.partition = partition;
-        if (this.subordinates != null) {
+        /*if (this.subordinates != null) {
             this.subordinates.forEach(s -> s.setPartition(this.partition));
-        }
+        }*/
     }
 
     public int getPartition() {

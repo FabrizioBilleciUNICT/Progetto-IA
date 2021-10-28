@@ -47,6 +47,20 @@ public class Graph {
         return neighbourhood;
     }
 
+    public Set<Node> adjOf(Node n) {
+        Set<Node> neighbourhood = new HashSet<>();
+
+        for (Map.Entry<String, Edge> entry : this.edgesMap.entrySet()) {
+            String[] keys = entry.getKey().split("-");
+            if (n.getId().equals(keys[0]))
+                neighbourhood.add(this.nodesMap.get(keys[1]));
+            else if (n.getId().equals(keys[1]))
+                neighbourhood.add(this.nodesMap.get(keys[0]));
+        }
+
+        return neighbourhood;
+    }
+
     public int getSize() {
         return this.nodesMap.size();
     }

@@ -10,7 +10,7 @@ import java.io.IOException;
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        Application a = new Application("email"); // email | yeast
+        Application a = new Application("yeast"); // email | yeast
         //a.readNetwork();
         a.readCSVNetwork();
         a.annealing();
