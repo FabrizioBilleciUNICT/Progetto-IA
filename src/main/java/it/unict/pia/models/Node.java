@@ -10,6 +10,9 @@ public class Node implements Comparable<Node> {
     private int weight;
     private int partition; // true = P0, false = P1
 
+    private int internalLinks;
+    private int degree;
+
     Set<Node> subordinates;
     Node parent;
 
@@ -18,6 +21,8 @@ public class Node implements Comparable<Node> {
         this.label = label;
         this.weight = 1;
         this.subordinates = new HashSet<>();
+        this.internalLinks = 0;
+        this.degree = 0;
     }
 
     public Node(String id, String label, int weight) {
@@ -94,5 +99,21 @@ public class Node implements Comparable<Node> {
 
     public void setParent(Node parent) {
         this.parent = parent;
+    }
+
+    public int getInternalLinks() {
+        return internalLinks;
+    }
+
+    public void setInternalLinks(int internalLinks) {
+        this.internalLinks = internalLinks;
+    }
+
+    public int getDegree() {
+        return degree;
+    }
+
+    public void setDegree(int degree) {
+        this.degree = degree;
     }
 }

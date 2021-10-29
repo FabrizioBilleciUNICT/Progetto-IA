@@ -107,6 +107,7 @@ public class Application {
         for (int k = 0; k < 1; k++) {
             while (this.graphs.get(i).getSize() > ct) {
                 s_i = solutionGuidedCoarsening(s_i, i);
+                System.err.println(s_i.getPartition().size());
                 s_i = setBestPartition(s_i, i+1);
                 i++;
             }
@@ -117,8 +118,8 @@ public class Application {
                 i--;
             }
 
-            var ci = conductance(s_i, i);
-            var cs = conductance(s_star, i);
+            var ci = 0.0; //conductance(s_i, i);
+            var cs = 0.1; //conductance(s_star, i);
             if (ci < cs) {
                 s_star = s_i;
             }
@@ -246,23 +247,19 @@ public class Application {
 
     private Partition unCoarsening(Partition s_i1, int level) {
         Partition s_i = new Partition();
-        //Graph unCoarsenGraph = new Graph();
-
-        for (int index = 0; index < s_i1.getPartition().size(); index++) {
-            Set<Node> partition = s_i1.getPartition().get(index);
+        for (Map.Entry<Integer, Set<Node>> entry : s_i1.getPartition().entrySet()) {
+            Set<Node> partition = entry.getValue();
             Set<Node> newPartition = new HashSet<>(2 * partition.size());
             for (Node node : partition) {
                 Set<Node> contractedNodes = node.getSubordinates();
                 newPartition.addAll(contractedNodes);
                 for (Node nc : contractedNodes) {
-                    nc.setPartition(index);
-                    this.graphs.get(level-1).getNodesMap().put(nc.getId(), nc);
+                    nc.setPartition(entry.getKey());
+                    this.graphs.get(level - 1).getNodesMap().put(nc.getId(), nc);
                 }
             }
-            s_i.addPartition(index, newPartition);
+            s_i.addPartition(entry.getKey(), newPartition);
         }
-        //this.graphs.set(--level, unCoarsenGraph);
-
         return s_i;
     }
 
@@ -278,10 +275,12 @@ public class Application {
         Modularity mod = new Modularity(this.graphs.get(level), level);
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
+        double currentQ = mod.getQ();
+        final int salter = 1000;
+        Set<Node> nodesCV = getNodesCV(level);
 
-        final int salter = 1;
         for (int i = 0; i < salter; i++) {
-            Node v = getRandomNodeCV(s_i, level);
+            Node v = getRandomNodeCV(nodesCV);
             if (v == null) break;
             final int partitionFrom = v.getPartition();
             final Set<Node> neighbours = this.graphs.get(level).adjOf(v);
@@ -312,18 +311,22 @@ public class Application {
                 }
             }
 
-            System.out.println(bestQ);
+            //System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
+            if (bestQ > currentQ) {
+                currentQ = bestQ;
+                System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
+                s_best.relocateNode(v, partitionFrom, bestP);
+                mod.relocateNode(v, partitionFrom, bestP);
+                // TODO: update nodes cv
 
-            s_best.relocateNode(v, partitionFrom, bestP);
-            mod.relocateNode(v, partitionFrom, bestP);
-
-            this.graphs.get(level).getNodesMap().get(v.getId()).setPartition(bestP);
+                this.graphs.get(level).getNodesMap().get(v.getId()).setPartition(bestP);
+            }
         }
 
         return s_best;
     }
 
-    private Node getRandomNodeCV(Partition s_i, int level) { // nodes near a cut
+    private Set<Node> getNodesCV(int level) {
         Set<Node> nodes = new HashSet<>();
         for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
             final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
@@ -334,42 +337,12 @@ public class Application {
                 nodes.add(nodeTarget);
             }
         }
+        return nodes;
+    }
 
-        Node[] arr = nodes.toArray(Node[]::new);
-        if (arr.length > 0) return arr[new Random().nextInt(nodes.size())];
+    private Node getRandomNodeCV(Set<Node> set) { // nodes near a cut
+        if (set.size() > 0) return set.stream().skip(new Random().nextInt(set.size())).findFirst().orElse(null);
         else return null;
-    }
-
-    private Partition relocate(Partition s_i, Node v, Node u) {
-        Partition s_i1 = new Partition();
-        s_i1.setPartition(new ArrayList<>(s_i.getPartition()));
-
-        if (new Random().nextInt(2) == 0) s_i1.relocateNode(v, v.getPartition(), u.getPartition());
-        else s_i1.relocateNode(u, u.getPartition(), v.getPartition());
-
-        return s_i1;
-    }
-
-    private int delta(Partition s_i, Node v, int level) {
-        int degree = 0;
-        for (Map.Entry<String, Edge> entry : this.graphs.get(level).getEdgesMap().entrySet()) {
-            final Node nodeSource = this.graphs.get(level).getEdgeSource(entry.getValue());
-            final Node nodeTarget = this.graphs.get(level).getEdgeTarget(entry.getValue());
-
-            if (nodeSource.equals(v) || nodeTarget.equals(v))
-                if (s_i.getPartition().get(0).contains(v) || s_i.getPartition().get(1).contains(v))
-                    degree++;
-        }
-
-        return degree;
-    }
-
-    private boolean canRelocate(double T, int d) {
-        if (d < 0) return true; // 1
-        else {
-            double prob = Math.exp(-d / T);
-            return prob > 0.5;
-        }
     }
 
     static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

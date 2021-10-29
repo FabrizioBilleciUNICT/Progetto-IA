@@ -29,11 +29,11 @@ public class Modularity {
     public void initializeQ(Partition s_i) {
         this.partition = s_i;
         q = 0.0;
-        for (int index = 0; index < s_i.getPartition().size(); index++) {
+        for (Map.Entry<Integer, Set<Node>> entry : s_i.getPartition().entrySet()) {
             int l_i = 0;
             int d_i = 0;
-            Set<Node> partition = s_i.getPartition().get(index);
-            Set<String> keys = s_i.getPartition().get(index).stream().map(Node::getId).collect(Collectors.toSet());
+            Set<Node> partition = entry.getValue();
+            Set<String> keys = partition.stream().map(Node::getId).collect(Collectors.toSet());
 
             for (Node n : partition) {
                 Set<Edge> curEdges = graph.edgesOf(n);
@@ -44,8 +44,8 @@ public class Modularity {
 
             l_i /= 2.0;
 
-            this.linksMap.put(index, l_i);
-            this.degreesMap.put(index, d_i);
+            this.linksMap.put(entry.getKey(), l_i);
+            this.degreesMap.put(entry.getKey(), d_i);
 
             //if (l_i > 0)
             var __x = (l_i / (M * 1.0));
