@@ -3,6 +3,10 @@ package it.unict.pia;
 import it.unict.pia.models.Edge;
 import it.unict.pia.models.Graph;
 import it.unict.pia.models.Node;
+import it.unict.pia.reader.CSVGraphReader;
+import it.unict.pia.reader.GmlGraphReader1;
+import it.unict.pia.reader.GmlGraphReader2;
+import it.unict.pia.reader.GraphReader;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,9 +14,11 @@ import java.io.IOException;
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        Application a = new Application("yeast"); // email | yeast
-        //a.readNetwork();
-        a.readCSVNetwork();
+        //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
+        //GraphReader gr = new GmlGraphReader1("yeast"); // email | yeast
+        GraphReader gr = new GmlGraphReader2("power");
+
+        Application a = new Application(gr.getGraph());
         a.annealing();
 
         for (int i = 0; i < a.graphs.size(); i++)

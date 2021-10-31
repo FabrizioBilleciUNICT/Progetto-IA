@@ -1,100 +1,19 @@
 package it.unict.pia;
 
-import it.unict.pia.models.*;
+import it.unict.pia.models.Edge;
+import it.unict.pia.models.Graph;
+import it.unict.pia.models.Node;
+import it.unict.pia.models.Partition;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Application {
 
     public Stack<Graph> graphs = new Stack<>();
-    private final String network;
 
-    public Application(String network) {
-        this.network = network;
-    }
-
-    public void readNetwork() throws FileNotFoundException {
-        FileInputStream graphInput = new FileInputStream("networks/" + network + "/" + network + ".gml");
-        Scanner scan = new Scanner(graphInput);
-
-        final Map<String, Node> nodesMap = new HashMap<>();
-        final Map<String, Edge> edgesMap = new HashMap<>();
-
-        int count = 0;
-        while (scan.hasNextLine()) {
-            String line = scan.nextLine();
-            if (!scan.hasNextLine()) break;
-
-            if (count > 2) {
-                String currentType = line.replace("  ", "");
-                if (currentType.equals("node")) {
-                    scan.nextLine();
-                    String currentId = scan.nextLine().replace("    id ", "");
-                    String currentLabel = scan.nextLine().replace("    label ", "").replaceAll("\"", "");
-                    scan.nextLine();
-                    Node node = new Node(currentId, currentLabel);
-                    nodesMap.put(currentId, node);
-                } else {
-                    scan.nextLine();
-                    String currentSource = scan.nextLine().replace("    source ", "");
-                    String currentTarget = scan.nextLine().replace("    target ", "");
-                    scan.nextLine();
-                    Edge edge = new Edge(currentSource, currentTarget);
-                    edgesMap.put(edge.getId(), edge);
-                }
-            }
-            count++;
-        }
-
-        this.graphs.add(new Graph(nodesMap, edgesMap));
-    }
-
-    private Map<String, Edge> readCSVEdges(String path) throws FileNotFoundException {
-        FileInputStream graphInput = new FileInputStream(path);
-        Scanner scan = new Scanner(graphInput);
-        final Map<String, Edge> edgesMap = new HashMap();
-        boolean header = true;
-        while (scan.hasNextLine()) {
-            String[] line = scan.nextLine().split(",");
-
-            if (header) {
-                header = false;
-                continue;
-            }
-
-            Edge edge = new Edge(line[1], line[2]);
-            edgesMap.put(edge.getId(), edge);
-        }
-        return edgesMap;
-    }
-
-    private Map<String, Node> readCSVNodes(String path) throws FileNotFoundException {
-        FileInputStream graphInput = new FileInputStream(path);
-        Scanner scan = new Scanner(graphInput);
-        final Map<String, Node> nodesMap = new HashMap();
-        boolean header = true;
-        while (scan.hasNextLine()) {
-            String[] line = scan.nextLine().split(",");
-
-            if (header) {
-                header = false;
-                continue;
-            }
-
-            Node node = new Node(line[0], line[1]);
-            nodesMap.put(line[0], node);
-        }
-        return nodesMap;
-    }
-
-    public void readCSVNetwork() throws FileNotFoundException {
-        final Map<String, Node> nodesMap = readCSVNodes("networks/test0/test_output_nodes.csv");
-        final Map<String, Edge> edgesMap = readCSVEdges("networks/test0/test_output_edges.csv");
-        this.graphs.add(new Graph(nodesMap, edgesMap));
+    public Application(Graph graph) {
+        this.graphs.add(graph);
     }
 
     public Partition annealing() {
@@ -204,6 +123,7 @@ public class Application {
                 node.addSubordinate(source);
                 node.addSubordinate(target);
                 node.setPartition(source.getPartition());
+                node.setSelfDegree(source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight()*2); // *2
 
                 coarseGraph.addNode(node);
                 verticesInMatching.remove(source);
@@ -221,6 +141,8 @@ public class Application {
         for (Node curNode : verticesInMatching) {
             Node node = new Node(curNode.getId(), curNode.getLabel(), 0);
             node.setPartition(curNode.getPartition());
+            //node.setDegree(curNode.getDegree());
+            node.setSelfDegree(curNode.getSelfDegree());
             node.addSubordinate(curNode);
             coarseGraph.addNode(node);
         }
@@ -236,6 +158,9 @@ public class Application {
                 if (edgeInCoarseGraph != null) newWeight += coarseGraph.getEdgeWeight(edgeInCoarseGraph);
                 else edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
                 coarseGraph.setEdgeWeight(edgeInCoarseGraph, newWeight);
+
+                coarseGraph.getNodesMap().get(parent1.getId()).increaseDegree(newWeight);
+                coarseGraph.getNodesMap().get(parent2.getId()).increaseDegree(newWeight);
             }
         }
 
@@ -276,31 +201,18 @@ public class Application {
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();
-        final int salter = 1000;
         Set<Node> nodesCV = getNodesCV(level);
 
-        for (int i = 0; i < salter; i++) {
-            Node v = getRandomNodeCV(nodesCV);
-            if (v == null) break;
+        int i = 0;
+        for (Node v : nodesCV) {
             final int partitionFrom = v.getPartition();
             final Set<Node> neighbours = this.graphs.get(level).adjOf(v);
             int bestP = partitionFrom;
             double bestQ = mod.getQ();
-
-            Set<Edge> edges = this.graphs.get(level).edgesOf(v);
             Map<Integer, Double> qMap = new HashMap<>();
-            for (Edge e : edges) {
-                Node source = this.graphs.get(level).getNodesMap().get(e.getSource());
-                Node target = this.graphs.get(level).getNodesMap().get(e.getTarget());
-
-                if (v.getId().equals(e.getSource())) {
-                    if (!v.isPartition(target.getPartition())) { // prova a spostare v nella partizione target
-                        qMap.put(target.getPartition(), mod.updateQ(neighbours, partitionFrom, target.getPartition()));
-                    }
-                } else if (v.getId().equals(e.getTarget())) {
-                    if (!v.isPartition(source.getPartition())) { // prova a spostare v nella partizione source
-                        qMap.put(source.getPartition(), mod.updateQ(neighbours, partitionFrom, target.getPartition()));
-                    }
+            for (Node n : neighbours) {
+                if (!v.isPartition(n.getPartition())) { // prova a spostare v nella partizione target
+                    qMap.put(n.getPartition(), mod.updateQ(v, neighbours, partitionFrom, n.getPartition(), false));
                 }
             }
 
@@ -316,11 +228,12 @@ public class Application {
                 currentQ = bestQ;
                 System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
                 s_best.relocateNode(v, partitionFrom, bestP);
-                mod.relocateNode(v, partitionFrom, bestP);
-                // TODO: update nodes cv
+                mod.updateQ(v, neighbours, partitionFrom, bestP, true);
 
                 this.graphs.get(level).getNodesMap().get(v.getId()).setPartition(bestP);
             }
+
+            i++;
         }
 
         return s_best;
@@ -338,11 +251,6 @@ public class Application {
             }
         }
         return nodes;
-    }
-
-    private Node getRandomNodeCV(Set<Node> set) { // nodes near a cut
-        if (set.size() > 0) return set.stream().skip(new Random().nextInt(set.size())).findFirst().orElse(null);
-        else return null;
     }
 
     static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
