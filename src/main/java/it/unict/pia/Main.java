@@ -12,14 +12,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class Main {
-
+    /*
+     * yeast --> Finished in: 26 seconds, modularity: 0.5766260903836502
+     * power --> Finished in: 29 seconds, modularity: 0.9232448750525402
+     * email --> Finished in: 9 seconds,  modularity: 0.5217472412531976
+     */
     public static void main(String[] args) throws IOException {
-        //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
+        GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
         //GraphReader gr = new GmlGraphReader1("yeast"); // email | yeast
-        GraphReader gr = new GmlGraphReader2("power");
+        //GraphReader gr = new GmlGraphReader2("power");
 
         Application a = new Application(gr.getGraph());
-        a.annealing();
+        var t1 = System.currentTimeMillis();
+        var modularity = a.annealing();
+        System.out.println("Finished in: " + ((System.currentTimeMillis() - t1) / 1000) + " seconds, modularity: " + modularity);
+        // 31 sec, 0.9 GB RAM (power)
 
         for (int i = 0; i < a.graphs.size(); i++)
             saveGraph(a.graphs.get(i), i);

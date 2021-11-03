@@ -17,30 +17,26 @@ public class Application {
         this.graphs.add(graph);
     }
 
-    public Partition annealing() {
-        final int ct = 70;//this.graphs.get(0).getSize() / 4; // 60000
-
-        final Partition s_0 = createSeedPartition();
-        Partition s_star = s_0;
-        Partition s_i = s_0;
+    public double annealing() {
+        Partition s_i = createSeedPartition();
         int i = 0; // level
-        for (int k = 0; k < 1; k++) {
-            while (this.graphs.get(i).getSize() > ct) {
-                s_i = solutionGuidedCoarsening(s_i, i);
-                System.err.println(s_i.getPartition().size());
-                s_i = setBestPartition(s_i, i+1);
-                i++;
-            }
+        double currentModularity = -0.5;
+        int counter = 0;
+        while (counter < 5) {
+            s_i = solutionGuidedCoarsening(s_i, i);
+            s_i = setBestPartition(s_i, i+1);
+            i++;
 
-            while (i > 0) {
-                s_i = unCoarsening(s_i, i);
-                i--;
-            }
-
-            s_star = s_i;
+            if (s_i.getModularity() > currentModularity) currentModularity = s_i.getModularity();
+            else counter++;
         }
 
-        return s_star;
+        while (i > 0) {
+            s_i = unCoarsening(s_i, i);
+            i--;
+        }
+
+        return currentModularity;
     }
 
     private Partition createSeedPartition() {
@@ -180,7 +176,7 @@ public class Application {
             //System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
             if (bestQ > currentQ) {
                 currentQ = bestQ;
-                System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
+                //System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
                 s_best.relocateNode(v, partitionFrom, bestP);
                 mod.updateQ(v, neighbours, partitionFrom, bestP, true);
 
@@ -189,6 +185,8 @@ public class Application {
 
             i++;
         }
+
+        s_best.setModularity(mod.getQ());
 
         return s_best;
     }

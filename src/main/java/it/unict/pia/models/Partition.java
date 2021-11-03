@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 public class Partition {
 
     private Map<Integer, Set<Node>> partition;
+    private double modularity;
 
     public Partition() {
         this.partition = new HashMap<>();
@@ -53,5 +54,13 @@ public class Partition {
         p.getPartition().forEach((k, v) -> partition.put(k, new HashSet<>(v)));
 
         return new Partition(partition);
+    }
+
+    public double getModularity() {
+        return modularity;
+    }
+
+    public void setModularity(double modularity) {
+        this.modularity = modularity;
     }
 }
