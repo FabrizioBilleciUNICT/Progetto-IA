@@ -15,13 +15,6 @@ public class Graph {
         this.edgesMap = edgesMap;
     }
 
-    public Graph(Set<Node> nodeSet, Set<Edge> edgeSet) {
-        this.nodesMap = new HashMap<>();
-        this.edgesMap = new HashMap<>();
-        for (Node n : nodeSet) this.nodesMap.put(n.getId(), n);
-        for (Edge e : edgeSet) this.edgesMap.put(e.getId(), e);
-    }
-
     public Graph() {
         this.nodesMap = new HashMap<>();
         this.edgesMap = new HashMap<>();
@@ -59,6 +52,20 @@ public class Graph {
         }
 
         return neighbourhood;
+    }
+
+    public int degreeOnPartition(Node n) {
+        int degree = 0;
+
+        for (Map.Entry<String, Edge> entry : this.edgesMap.entrySet()) {
+            String[] keys = entry.getKey().split("-");
+            if (n.getId().equals(keys[0]) && this.nodesMap.get(keys[1]).isPartition(n.getPartition()))
+                degree += entry.getValue().getWeight();
+            else if (n.getId().equals(keys[1]) && this.nodesMap.get(keys[0]).isPartition(n.getPartition()))
+                degree += entry.getValue().getWeight();
+        }
+
+        return degree;
     }
 
     public int getSize() {

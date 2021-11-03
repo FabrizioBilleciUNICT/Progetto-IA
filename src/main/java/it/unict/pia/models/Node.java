@@ -8,11 +8,9 @@ public class Node implements Comparable<Node> {
     private String id;
     private String label;
     private int weight;
-    private int partition; // true = P0, false = P1
-
+    private int partition;
     private int selfDegree;
     private int degree;
-
     Set<Node> subordinates;
     Node parent;
 
@@ -76,9 +74,6 @@ public class Node implements Comparable<Node> {
 
     public void setPartition(int partition) {
         this.partition = partition;
-        /*if (this.subordinates != null) {
-            this.subordinates.forEach(s -> s.setPartition(this.partition));
-        }*/
     }
 
     public int getPartition() {

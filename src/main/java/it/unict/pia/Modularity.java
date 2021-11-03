@@ -11,31 +11,31 @@ import java.util.Set;
 public class Modularity {
 
     private double q = 0.0;
-    private Map<Integer, Integer> linksMap = new HashMap<>();
+    private Map<Integer, Double> linksMap = new HashMap<>();
     private Map<Integer, Integer> degreesMap = new HashMap<>();
     private int M;
     private Graph graph;
     private int level;
     private Partition partition;
 
-    public Modularity(Graph graph, int level) {
+    public Modularity(Graph graph, int level, int M) {
         this.level = level;
         this.graph = graph;
-        this.M = this.graph.getEdgesMap().size();
+        this.M = M;
     }
 
     public void initializeQ(Partition s_i) {
         this.partition = s_i;
         q = 0.0;
         for (Map.Entry<Integer, Set<Node>> entry : s_i.getPartition().entrySet()) {
-            int l_i = 0;
+            double l_i = 0.0;
             int d_i = 0;
             Set<Node> partition = entry.getValue();
 
             for (Node n : partition) {
-                d_i += n.getDegree();
-                l_i += n.getSelfDegree();
-                this.M += n.getSelfDegree();
+                d_i += n.getDegree() + n.getSelfDegree() * 2;
+                var z = this.graph.degreeOnPartition(n);
+                l_i += n.getSelfDegree() + z / 2.0;
             }
 
             this.linksMap.put(entry.getKey(), l_i);
@@ -57,13 +57,12 @@ public class Modularity {
         return q;
     }
 
-    // TODO: modularity overtakes 1.0
     public double updateQ(Node n, Set<Node> neighbours, int partitionFrom, int partitionTo, boolean toStore) {
         double newQ = q;
 
-        final int l_i_from = this.linksMap.get(partitionFrom);
+        final var l_i_from = this.linksMap.get(partitionFrom);
         final int d_i_from = this.degreesMap.get(partitionFrom);
-        final int l_i_to = this.linksMap.get(partitionTo);
+        final var l_i_to = this.linksMap.get(partitionTo);
         final int d_i_to = this.degreesMap.get(partitionTo);
 
         var x_from = (l_i_from / (M * 1.0));
@@ -73,11 +72,30 @@ public class Modularity {
         var y_to = Math.pow(d_i_to / (2.0 * M), 2);
         newQ -= (x_to - y_to);
 
-        int newLinkFrom = l_i_from - (int) neighbours.stream().filter(x -> x.isPartition(partitionFrom)).count();
-        int newDegreeFrom = d_i_from - n.getDegree();
-        int newLinkTo = l_i_to + (int) neighbours.stream().filter(x -> x.isPartition(partitionTo)).count();
-        int newDegreeTo = d_i_to + n.getDegree();
-        // .mapToInt(Node::getSelfDegree).sum();
+        var oldP = 0;
+        for (Node x : neighbours) {
+            if (x.isPartition(partitionFrom)) {
+                final String e1 = x.getId() + "-" + n.getId();
+                final String e2 = n.getId() + "-" + x.getId();
+                if (graph.getEdgesMap().containsKey(e1)) oldP += graph.getEdgesMap().get(e1).getWeight();
+                else if (graph.getEdgesMap().containsKey(e2)) oldP += graph.getEdgesMap().get(e2).getWeight();
+            }
+        }
+
+        var newP = 0;
+        for (Node x : neighbours) {
+            if (x.isPartition(partitionTo)) {
+                final String e1 = x.getId() + "-" + n.getId();
+                final String e2 = n.getId() + "-" + x.getId();
+                if (graph.getEdgesMap().containsKey(e1)) newP += graph.getEdgesMap().get(e1).getWeight();
+                else if (graph.getEdgesMap().containsKey(e2)) newP += graph.getEdgesMap().get(e2).getWeight();
+            }
+        }
+
+        var newLinkFrom = l_i_from - oldP;
+        int newDegreeFrom = d_i_from - (n.getDegree() + n.getSelfDegree() * 2);
+        var newLinkTo = l_i_to + newP;
+        int newDegreeTo = d_i_to + n.getDegree() + n.getSelfDegree() * 2;
 
         var n_x_from = (newLinkFrom / (M * 1.0));
         var n_y_from = Math.pow(newDegreeFrom / (2.0 * M), 2);
