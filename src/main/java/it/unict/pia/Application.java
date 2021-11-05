@@ -15,28 +15,34 @@ public class Application {
 
     public Application(Graph graph) {
         this.graphs.add(graph);
+        this.graphs.get(0).setNeighbors();
     }
 
-    public double annealing() {
+    public String annealing() {
+        Stats stats = new Stats();
         Partition s_i = createSeedPartition();
-        int i = 0; // level
+        int i = 0;
         double currentModularity = -0.5;
         int counter = 0;
         while (counter < 5) {
-            s_i = solutionGuidedCoarsening(s_i, i);
-            s_i = setBestPartition(s_i, i+1);
-            i++;
+            s_i = solutionGuidedCoarsening(i);
+            s_i = setBestPartition(s_i, ++i);
 
             if (s_i.getModularity() > currentModularity) currentModularity = s_i.getModularity();
             else counter++;
         }
+
+        stats.setLevels(i);
+        stats.setModularity(currentModularity);
 
         while (i > 0) {
             s_i = unCoarsening(s_i, i);
             i--;
         }
 
-        return currentModularity;
+        stats.setPartitions(s_i.getPartition().size());
+
+        return stats.getStats();
     }
 
     private Partition createSeedPartition() {
@@ -47,7 +53,7 @@ public class Application {
         return new Partition(this.graphs.get(0));
     }
 
-    private Partition solutionGuidedCoarsening(Partition s_i, int level) {
+    private Partition solutionGuidedCoarsening(int level) {
         LinkedList<Node> nodes = new LinkedList<>(this.graphs.get(level).nodeSet());
         Collections.shuffle(nodes);
 
@@ -88,7 +94,7 @@ public class Application {
                 node.addSubordinate(source);
                 node.addSubordinate(target);
                 node.setPartition(source.getPartition());
-                node.setSelfDegree(source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight()); // *2
+                node.setSelfDegree((int) (source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight())); // *2
 
                 coarseGraph.addNode(node);
                 verticesInMatching.remove(source);
@@ -110,15 +116,15 @@ public class Application {
             Node parent2 = this.graphs.get(level).getEdgeTarget(curEdge).getParent();
 
             if (parent1 != parent2) {
-                int oldEdgeWeight = this.graphs.get(level).getEdgeWeight(curEdge);
+                var oldEdgeWeight = this.graphs.get(level).getEdgeWeight(curEdge);
                 Edge edgeInCoarseGraph = coarseGraph.getEdge(parent1, parent2);
                 var newWeight = oldEdgeWeight;
                 if (edgeInCoarseGraph != null) newWeight += coarseGraph.getEdgeWeight(edgeInCoarseGraph);
                 else edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
                 coarseGraph.setEdgeWeight(edgeInCoarseGraph, newWeight);
 
-                coarseGraph.getNodesMap().get(parent1.getId()).increaseDegree(oldEdgeWeight);
-                coarseGraph.getNodesMap().get(parent2.getId()).increaseDegree(oldEdgeWeight);
+                coarseGraph.getNodesMap().get(parent1.getId()).increaseDegree((int) oldEdgeWeight);
+                coarseGraph.getNodesMap().get(parent2.getId()).increaseDegree((int) oldEdgeWeight);
             }
         }
 
@@ -147,13 +153,14 @@ public class Application {
     }
 
     private Partition setBestPartition(Partition s_i, int level) {
+        this.graphs.get(level).setNeighbors();
+
         Modularity mod = new Modularity(this.graphs.get(level), level, this.graphs.get(0).getEdgesMap().size());
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();
         Set<Node> nodesCV = getNodesCV(level);
 
-        int i = 0;
         for (Node v : nodesCV) {
             final int partitionFrom = v.getPartition();
             final Set<Node> neighbours = this.graphs.get(level).adjOf(v);
@@ -173,17 +180,13 @@ public class Application {
                 }
             }
 
-            //System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
             if (bestQ > currentQ) {
                 currentQ = bestQ;
-                //System.out.printf("[level] %d, [iter] %d - {%f} == {%f}%n", level, i, currentQ, bestQ);
                 s_best.relocateNode(v, partitionFrom, bestP);
                 mod.updateQ(v, neighbours, partitionFrom, bestP, true);
 
                 this.graphs.get(level).getNodesMap().get(v.getId()).setPartition(bestP);
             }
-
-            i++;
         }
 
         s_best.setModularity(mod.getQ());

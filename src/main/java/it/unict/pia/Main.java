@@ -1,62 +1,34 @@
 package it.unict.pia;
 
-import it.unict.pia.models.Edge;
-import it.unict.pia.models.Graph;
-import it.unict.pia.models.Node;
-import it.unict.pia.reader.CSVGraphReader;
-import it.unict.pia.reader.GmlGraphReader1;
-import it.unict.pia.reader.GmlGraphReader2;
-import it.unict.pia.reader.GraphReader;
+import it.unict.pia.reader.*;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 
+import static it.unict.pia.Utils.saveGraph;
+
 public class Main {
-    /*
-     * yeast --> Finished in: 26 seconds, modularity: 0.5766260903836502
-     * power --> Finished in: 29 seconds, modularity: 0.9232448750525402
-     * email --> Finished in: 9 seconds,  modularity: 0.5217472412531976
+
+    //(0.582761 - 0.5217472412531976)/1.5*100
+    /**
+     * test1    --> Finished in: 0 seconds,   modularity: 0.411242603550296,  levels: 7,   partitions: 2
+     * yeast    --> Finished in: 1 seconds,   modularity: 0.5678863240716703, levels: 28,  partitions: 87
+     * email    --> Finished in: 1 seconds,   modularity: 0.5211278574270243, levels: 20,  partitions: 37
+     * power    --> Finished in: 1 seconds,   modularity: 0.9294606134067894, levels: 54,  partitions: 50
+     * football --> Finished in: 0 seconds,   modularity: 0.5835752816224862, levels: 9,   partitions: 12
+     * cond-mat --> Finished in: 175 seconds, modularity: 0.2338610542628626, levels: 166, partitions: 19148
      */
     public static void main(String[] args) throws IOException {
-        GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
-        //GraphReader gr = new GmlGraphReader1("yeast"); // email | yeast
+        //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
+        //GraphReader gr = new GmlGraphReader1("email"); // email | yeast
         //GraphReader gr = new GmlGraphReader2("power");
+        //GraphReader gr = new GmlGraphReader3("football");
+        GraphReader gr = new GmlGraphReader4("cond-mat-2003");
 
         Application a = new Application(gr.getGraph());
-        var t1 = System.currentTimeMillis();
-        var modularity = a.annealing();
-        System.out.println("Finished in: " + ((System.currentTimeMillis() - t1) / 1000) + " seconds, modularity: " + modularity);
-        // 31 sec, 0.9 GB RAM (power)
+        String stats = a.annealing();
+        System.out.println(stats);
 
-        for (int i = 0; i < a.graphs.size(); i++)
+        for (int i = 0; i < 1; i++)
             saveGraph(a.graphs.get(i), i);
-    }
-
-    private static void saveGraph(Graph graph, int index) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        sb.append("id,label,weight,partition").append("\n");
-        for (var n : graph.getNodesMap().entrySet()) {
-            Node v = n.getValue();
-            sb.append(n.getKey()).append(",").append(v.getLabel()).append(",").append(v.getWeight()).append(",").append(v.getPartition());
-            sb.append("\n");
-        }
-        saveToFile("output/" + index + "_output_nodes.csv", sb);
-
-        sb = new StringBuilder();
-        sb.append("id,source,target,weight").append("\n");
-        for (var n : graph.getEdgesMap().entrySet()) {
-            Edge v = n.getValue();
-            sb.append(n.getKey()).append(",").append(v.getSource()).append(",").append(v.getTarget()).append(",").append(v.getWeight());
-            sb.append("\n");
-        }
-        saveToFile("output/" + index + "_output_edges.csv", sb);
-    }
-
-    private static void saveToFile(String fn, StringBuilder sb) throws IOException {
-        String s = sb.toString();
-        FileOutputStream outputStream = new FileOutputStream(fn);
-        byte[] strToBytes = s.getBytes();
-        outputStream.write(strToBytes);
-        outputStream.close();
     }
 }

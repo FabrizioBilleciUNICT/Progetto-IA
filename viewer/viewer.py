@@ -6,7 +6,7 @@ import random
 indices = ["0"] # "1", "2", "3", "4", "5"
 colors_ = lambda n: list(map(lambda i: "#" + "%06x" % random.randint(0, 0xFFFFFF), range(n)))
 
-list_colors = colors_(70)
+list_colors = colors_(70000)
 map_colors = dict()
 
 for index in indices:

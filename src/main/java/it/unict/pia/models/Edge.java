@@ -7,13 +7,13 @@ public class Edge {
     private String source;
     private String target;
     private String id;
-    private int weight;
+    private double weight;
 
-    public Edge(String source, String target) {
+    public Edge(String source, String target, double weight) {
         this.source = source;
         this.target = target;
+        this.weight = weight;
         this.id = source + "-" + target;
-        this.weight = 1;
     }
 
     public String getSource() {
@@ -40,11 +40,11 @@ public class Edge {
         this.id = id;
     }
 
-    public int getWeight() {
+    public double getWeight() {
         return weight;
     }
 
-    public void setWeight(int weight) {
+    public void setWeight(double weight) {
         this.weight = weight;
     }
 

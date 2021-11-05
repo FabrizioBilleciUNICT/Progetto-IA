@@ -36,7 +36,7 @@ public class CSVGraphReader extends GraphReader {
                 continue;
             }
 
-            Edge edge = new Edge(line[1], line[2]);
+            Edge edge = new Edge(line[1], line[2], 1.0);
             edgesMap.put(edge.getId(), edge);
         }
         return edgesMap;

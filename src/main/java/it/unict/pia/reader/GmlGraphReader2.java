@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class GmlGraphReader2 extends GraphReader {
-    //TODO: 'power' format graph
+
     public GmlGraphReader2(String path) {
         super(path);
     }
@@ -42,7 +42,7 @@ public class GmlGraphReader2 extends GraphReader {
                     String currentSource = scan.nextLine().replace("    source ", "");
                     String currentTarget = scan.nextLine().replace("    target ", "");
                     scan.nextLine();
-                    Edge edge = new Edge(currentSource, currentTarget);
+                    Edge edge = new Edge(currentSource, currentTarget, 1.0);
                     edgesMap.put(edge.getId(), edge);
                 }
             }
