@@ -26,9 +26,15 @@ public class Application {
         int counter = 0;
         while (counter < 5) {
             s_i = solutionGuidedCoarsening(i);
-            s_i = setBestPartition(s_i, ++i);
+            s_i = setBestPartition(s_i, i+1);
+            i++;
 
-            if (s_i.getModularity() > currentModularity) currentModularity = s_i.getModularity();
+            //System.out.println("Iter:" + i + ", mod: " + s_i.getModularity());
+
+            if (s_i.getModularity() > currentModularity + 0.0001) {
+                currentModularity = s_i.getModularity();
+                counter = 0;
+            }
             else counter++;
         }
 
@@ -155,7 +161,7 @@ public class Application {
     private Partition setBestPartition(Partition s_i, int level) {
         this.graphs.get(level).setNeighbors();
 
-        Modularity mod = new Modularity(this.graphs.get(level), level, this.graphs.get(0).getEdgesMap().size());
+        Modularity mod = new Modularity(this.graphs.get(level), this.graphs.get(0).getEdgesMap().size());
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();
@@ -165,18 +171,14 @@ public class Application {
             final int partitionFrom = v.getPartition();
             final Set<Node> neighbours = this.graphs.get(level).adjOf(v);
             int bestP = partitionFrom;
-            double bestQ = mod.getQ();
-            Map<Integer, Double> qMap = new HashMap<>();
+            double bestQ = currentQ;
             for (Node n : neighbours) {
                 if (!v.isPartition(n.getPartition())) { // prova a spostare v nella partizione target
-                    qMap.put(n.getPartition(), mod.updateQ(v, neighbours, partitionFrom, n.getPartition(), false));
-                }
-            }
-
-            for (Map.Entry<Integer, Double> partitions : qMap.entrySet()) {
-                if (partitions.getValue() > bestQ) {
-                    bestQ = partitions.getValue();
-                    bestP = partitions.getKey();
+                    final double q = mod.updateQ(v, neighbours, partitionFrom, n.getPartition(), false);
+                    if (q > bestQ) {
+                        bestP = n.getPartition();
+                        bestQ = q;
+                    }
                 }
             }
 

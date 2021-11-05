@@ -11,15 +11,13 @@ import java.util.Set;
 public class Modularity {
 
     private double q = 0.0;
-    private Map<Integer, Double> linksMap = new HashMap<>();
-    private Map<Integer, Integer> degreesMap = new HashMap<>();
-    private int M;
-    private Graph graph;
-    private int level;
+    private final Map<Integer, Double> linksMap = new HashMap<>();
+    private final Map<Integer, Integer> degreesMap = new HashMap<>();
+    private final int M;
+    private final Graph graph;
     private Partition partition;
 
-    public Modularity(Graph graph, int level, int M) {
-        this.level = level;
+    public Modularity(Graph graph, int M) {
         this.graph = graph;
         this.M = M;
     }
@@ -34,22 +32,12 @@ public class Modularity {
 
             for (Node n : partition) {
                 d_i += n.getDegree() + n.getSelfDegree() * 2;
-                var z = this.graph.degreeOnPartition(n);
-                l_i += n.getSelfDegree() + z / 2.0;
+                l_i += n.getSelfDegree() + this.graph.degreeOnPartition(n) / 2.0;
             }
 
             this.linksMap.put(entry.getKey(), l_i);
             this.degreesMap.put(entry.getKey(), d_i);
-        }
-
-        for (Map.Entry<Integer, Set<Node>> entry : s_i.getPartition().entrySet()) {
-            var d_i = this.degreesMap.get(entry.getKey());
-            var l_i = this.linksMap.get(entry.getKey());
-
-            var __x = (l_i / (M * 1.0));
-            var __y = Math.pow(d_i / (2.0 * M), 2);
-
-            q += __x - __y;
+            q += (l_i / (M * 1.0)) - Math.pow(d_i / (2.0 * M), 2);
         }
     }
 
@@ -73,6 +61,7 @@ public class Modularity {
         newQ -= (x_to - y_to);
 
         var oldP = 0;
+        var newP = 0;
         for (Node x : neighbours) {
             if (x.isPartition(partitionFrom)) {
                 final String e1 = x.getId() + "-" + n.getId();
@@ -80,10 +69,7 @@ public class Modularity {
                 if (graph.getEdgesMap().containsKey(e1)) oldP += graph.getEdgesMap().get(e1).getWeight();
                 else if (graph.getEdgesMap().containsKey(e2)) oldP += graph.getEdgesMap().get(e2).getWeight();
             }
-        }
 
-        var newP = 0;
-        for (Node x : neighbours) {
             if (x.isPartition(partitionTo)) {
                 final String e1 = x.getId() + "-" + n.getId();
                 final String e2 = n.getId() + "-" + x.getId();

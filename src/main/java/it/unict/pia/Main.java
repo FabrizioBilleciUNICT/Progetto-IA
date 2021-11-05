@@ -10,12 +10,12 @@ public class Main {
 
     //(0.582761 - 0.5217472412531976)/1.5*100
     /**
-     * test1    --> Finished in: 0 seconds,   modularity: 0.411242603550296,  levels: 7,   partitions: 2
-     * yeast    --> Finished in: 1 seconds,   modularity: 0.5678863240716703, levels: 28,  partitions: 87
-     * email    --> Finished in: 1 seconds,   modularity: 0.5211278574270243, levels: 20,  partitions: 37
-     * power    --> Finished in: 1 seconds,   modularity: 0.9294606134067894, levels: 54,  partitions: 50
-     * football --> Finished in: 0 seconds,   modularity: 0.5835752816224862, levels: 9,   partitions: 12
-     * cond-mat --> Finished in: 175 seconds, modularity: 0.2338610542628626, levels: 166, partitions: 19148
+     * test1    --> Finished in: 0 seconds,   modularity: 0.411242603550296,   levels: 7,   partitions: 2
+     * yeast    --> Finished in: 1 seconds,   modularity: 0.5678863240716703,  levels: 28,  partitions: 87
+     * email    --> Finished in: 1 seconds,   modularity: 0.5211278574270243,  levels: 20,  partitions: 37
+     * power    --> Finished in: 1 seconds,   modularity: 0.9294606134067894,  levels: 54,  partitions: 50
+     * football --> Finished in: 0 seconds,   modularity: 0.5835752816224862,  levels: 9,   partitions: 12
+     * cond-mat --> Finished in: 136 seconds, modularity: 0.23356272218939933, levels: 155, partitions: 19139
      */
     public static void main(String[] args) throws IOException {
         //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
