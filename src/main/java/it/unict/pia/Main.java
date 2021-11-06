@@ -16,6 +16,8 @@ public class Main {
      * power    --> Finished in: 1 seconds,   modularity: 0.9294606134067894,  levels: 54,  partitions: 50
      * football --> Finished in: 0 seconds,   modularity: 0.5835752816224862,  levels: 9,   partitions: 12
      * cond-mat --> Finished in: 136 seconds, modularity: 0.23356272218939933, levels: 155, partitions: 19139
+     * cond-mat --> Finished in: 43 seconds,  modularity: 0.7266252050681206,  levels: 251, partitions: 1868 (no weight)
+     * cond-mat --> Finished in: 39 seconds,  modularity: 0.7195819381973441,  levels: 217, partitions: 1930 (no weight)
      */
     public static void main(String[] args) throws IOException {
         //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1

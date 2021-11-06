@@ -44,7 +44,7 @@ public class GmlGraphReader4 extends GraphReader {
                     String currentTarget = scan.nextLine().replace("    target ", "");
                     String value = scan.nextLine().replace("    value ", "");
                     scan.nextLine();
-                    Edge edge = new Edge(currentSource, currentTarget, Double.parseDouble(value));
+                    Edge edge = new Edge(currentSource, currentTarget, 1.0); // Double.parseDouble(value)
                     edgesMap.put(edge.getId(), edge);
                 }
             }
