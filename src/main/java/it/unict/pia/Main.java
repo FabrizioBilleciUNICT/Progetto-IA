@@ -1,36 +1,43 @@
 package it.unict.pia;
 
 import it.unict.pia.reader.*;
+import picocli.CommandLine;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import static it.unict.pia.Utils.saveGraph;
 
-public class Main {
+@CommandLine.Command(name = "CDCUM", description = "Community detection in coarse-uncoarse modularity way", mixinStandardHelpOptions = true)
+public class Main implements Callable<Integer> {
+    @CommandLine.Option(names = {"-n", "--network"}, required = true, description = "Network: 'yeast' | 'email' | 'power' | 'football' | 'cond-mat-2003'", defaultValue = "test1")
+    String network;
+    @CommandLine.Option(names = {"-w", "--weighted"}, description = "Weighted edges: 'y' | 'n'", defaultValue = "n")
+    String weighted;
+    @CommandLine.Option(names = {"-o", "--outputLen"}, description = "Number of CSV files to save, based on levels", defaultValue = "1")
+    String outputLen;
 
-    //(0.582761 - 0.5217472412531976)/1.5*100
-    /**
-     * test1    --> Finished in: 0 seconds,   modularity: 0.411242603550296,   levels: 7,   partitions: 2
-     * yeast    --> Finished in: 1 seconds,   modularity: 0.5678863240716703,  levels: 28,  partitions: 87
-     * email    --> Finished in: 1 seconds,   modularity: 0.5211278574270243,  levels: 20,  partitions: 37
-     * power    --> Finished in: 1 seconds,   modularity: 0.9294606134067894,  levels: 54,  partitions: 50
-     * football --> Finished in: 0 seconds,   modularity: 0.5835752816224862,  levels: 9,   partitions: 12
-     * cond-mat --> Finished in: 136 seconds, modularity: 0.23356272218939933, levels: 155, partitions: 19139
-     * cond-mat --> Finished in: 43 seconds,  modularity: 0.7266252050681206,  levels: 251, partitions: 1868 (no weight)
-     * cond-mat --> Finished in: 39 seconds,  modularity: 0.7195819381973441,  levels: 217, partitions: 1930 (no weight)
-     */
-    public static void main(String[] args) throws IOException {
-        //GraphReader gr = new CSVGraphReader("test1"); // test0 | test1
-        //GraphReader gr = new GmlGraphReader1("email"); // email | yeast
-        //GraphReader gr = new GmlGraphReader2("power");
-        //GraphReader gr = new GmlGraphReader3("football");
-        GraphReader gr = new GmlGraphReader4("cond-mat-2003");
+    public Integer call() throws IOException {
+        GraphReader gr = switch (network) {
+            case "yeast", "email" -> new GmlGraphReader1(network);
+            case "power" -> new GmlGraphReader2(network);
+            case "football" -> new GmlGraphReader3(network);
+            case "cond-mat-2003" -> new GmlGraphReader4(network, weighted.equals("y"));
+            default -> new CSVGraphReader(network); // test0, test1
+        };
 
         Application a = new Application(gr.getGraph());
         String stats = a.annealing();
         System.out.println(stats);
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < Math.min(a.graphs.size(), Integer.parseInt(outputLen)); i++)
             saveGraph(a.graphs.get(i), i);
+
+        return 0;
+    }
+
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new Main()).execute(args);
+        System.exit(exitCode);
     }
 }

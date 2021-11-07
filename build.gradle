@@ -3,15 +3,27 @@ plugins {
 }
 
 group 'it.unict.pia'
-version '0.1'
+version '1.0'
 
 repositories {
     mavenCentral()
 }
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'it.unict.pia.Main'
+    }
+    from {
+        compileJava.classpath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+}
+
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    implementation 'info.picocli:picocli:4.6.2'
 }
 
 test {

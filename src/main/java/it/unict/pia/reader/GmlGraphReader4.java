@@ -12,8 +12,11 @@ import java.util.Scanner;
 
 public class GmlGraphReader4 extends GraphReader {
 
-    public GmlGraphReader4(String path) {
+    private final boolean isWeighted;
+
+    public GmlGraphReader4(String path, boolean isWeighted) {
         super(path);
+        this.isWeighted = isWeighted;
     }
 
     @Override
@@ -44,7 +47,7 @@ public class GmlGraphReader4 extends GraphReader {
                     String currentTarget = scan.nextLine().replace("    target ", "");
                     String value = scan.nextLine().replace("    value ", "");
                     scan.nextLine();
-                    Edge edge = new Edge(currentSource, currentTarget, 1.0); // Double.parseDouble(value)
+                    Edge edge = new Edge(currentSource, currentTarget, isWeighted ? Double.parseDouble(value) : 1.0);
                     edgesMap.put(edge.getId(), edge);
                 }
             }
