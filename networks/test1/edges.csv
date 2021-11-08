@@ -1,0 +1,14 @@
+id,source,target,weight
+A-D,A,D,1
+A-B,A,B,1
+A-E,A,E,1
+B-E,B,E,1
+B-C,B,C,1
+C-D,C,D,1
+D-E,D,E,1
+C-F,C,F,1
+F-G,F,G,1
+G-H,G,H,1
+H-I,H,I,1
+I-F,I,F,1
+F-H,F,H,1

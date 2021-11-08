@@ -1,72 +1,66 @@
 package it.unict.pia.models;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Partition {
 
-    private ArrayList<Set<Node>> partition;
-    private Set<Node> p0, p1;
+    private Map<Integer, Set<Node>> partition;
+    private double modularity;
 
     public Partition() {
-        this.partition = new ArrayList<>();
-        this.p0 = new HashSet<>();
-        this.p1 = new HashSet<>();
+        this.partition = new HashMap<>();
     }
 
-    public Partition(ArrayList<Set<Node>> partition) {
+    public Partition(Map<Integer, Set<Node>> partition) {
         this.partition = partition;
-        this.p0 = this.partition.get(0);
-        this.p1 = this.partition.get(1);
     }
 
     public Partition(Graph graph) {
-        this.partition = new ArrayList<>();
-        Set<Node> nodeSetP0 = graph.nodeSet();
-        Set<Node> nodeSetP1 = graph.nodeSet();
+        this.partition = new HashMap<>();
 
         for (Map.Entry<String, Node> entry : graph.getNodesMap().entrySet()) {
-            if (entry.getValue().isPartitionP0()) nodeSetP0.add(entry.getValue());
-            else nodeSetP1.add(entry.getValue());
+            int p = entry.getValue().getPartition();
+            if (!partition.containsKey(p)) partition.put(p, new HashSet<>());
+            partition.get(p).add(entry.getValue());
         }
-
-        this.partition.add(nodeSetP0);
-        this.partition.add(nodeSetP1);
-        this.p0 = nodeSetP0;
-        this.p1 = nodeSetP1;
     }
 
-    public ArrayList<Set<Node>> getPartition() {
+    public Map<Integer, Set<Node>> getPartition() {
         return partition;
     }
 
-    public void setPartition(ArrayList<Set<Node>> partition) {
+    public void setPartition(Map<Integer, Set<Node>> partition) {
         this.partition = partition;
     }
 
-    public Set<Node> getP0() {
-        return p0;
-    }
+    public void relocateNode(Node n, int partitionFrom, int partitionTo) {
+        this.partition.put(partitionFrom, this.partition.get(partitionFrom)
+                .stream()
+                .filter(x -> !x.getId().equals(n.getId()))
+                .collect(Collectors.toSet())
+        );
 
-    public Set<Node> getP1() {
-        return p1;
-    }
-
-    public void relocateNode(Node n) {
-        if (this.p0.contains(n)) {  // P0 --> P1
-            this.p1.add(n);
-            this.p0.remove(n);
-        } else {                    // P1 --> P0
-            this.p0.add(n);
-            this.p1.remove(n);
-        }
-
-        this.partition = new ArrayList<>();
-        this.partition.add(this.p0);
-        this.partition.add(this.p1);
+        n.setPartition(partitionTo);
+        this.partition.get(partitionTo).add(n);
     }
 
     public void addPartition(int index, Set<Node> nodes) {
-        if (this.partition.size() > index) this.partition.set(index, nodes);
-        else this.partition.add(nodes);
+        this.partition.put(index, nodes);
+    }
+
+    public static Partition copyOf(Partition p) {
+        Map<Integer, Set<Node>> partition = new HashMap<>();
+        p.getPartition().forEach((k, v) -> partition.put(k, new HashSet<>(v)));
+
+        return new Partition(partition);
+    }
+
+    public double getModularity() {
+        return modularity;
+    }
+
+    public void setModularity(double modularity) {
+        this.modularity = modularity;
     }
 }
