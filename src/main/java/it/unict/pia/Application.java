@@ -29,8 +29,6 @@ public class Application {
             s_i = setBestPartition(s_i, i+1);
             i++;
 
-            //System.out.println("Iter:" + i + ", mod: " + s_i.getModularity());
-
             if (s_i.getModularity() > currentModularity + 0.0001) {
                 currentModularity = s_i.getModularity();
                 counter = 0;
@@ -43,6 +41,7 @@ public class Application {
 
         while (i > 0) {
             s_i = unCoarsening(s_i, i);
+            s_i = setBestPartition(s_i, i-1);
             i--;
         }
 
@@ -65,26 +64,19 @@ public class Application {
 
         Set<Node> verticesInMatching = new HashSet<>();
         Set<Edge> edgesInMatching = new HashSet<>();
-        Edge.EdgeComparator edgeComparator = new Edge.EdgeComparator();
 
-        for (Node curNode : nodes) {
-            if (!verticesInMatching.contains(curNode)) {
-                verticesInMatching.add(curNode);
-                Set<Edge> curEdges = this.graphs.get(level).edgesOf(curNode);
-                LinkedList<Edge> curEdgesList = new LinkedList<>(curEdges);
-                curEdgesList.sort(edgeComparator);
+        for (Node n : nodes) {
+            if (!verticesInMatching.contains(n)) {
+                verticesInMatching.add(n);
 
-                for (Edge curEdge : curEdgesList) {
-                    Node neighbourNode = this.graphs.get(level).getEdgeSource(curEdge);
-                    if (neighbourNode == curNode) {
-                        neighbourNode = this.graphs.get(level).getEdgeTarget(curEdge);
-                    }
-
-                    if (!verticesInMatching.contains(neighbourNode)) {
-                        edgesInMatching.add(curEdge);
-                        verticesInMatching.add(neighbourNode);
-                        break;
-                    }
+                Optional<Node> opt = this.graphs.get(level).adjOf(n)
+                        .stream()
+                        .filter(x -> x.isPartition(n.getPartition()) && !verticesInMatching.contains(x))
+                        .max(Comparator.comparingDouble(o1 -> o1.getSelfDegree() / (o1.getDegree() + 1.0))); // maybe l_i / d_i ?
+                if (opt.isPresent()) {
+                    Edge e = this.graphs.get(level).getEdge(n, opt.get());
+                    verticesInMatching.add(opt.get());
+                    edgesInMatching.add(e);
                 }
             }
         }
@@ -95,17 +87,15 @@ public class Application {
             Node source = this.graphs.get(level).getEdgeSource(curEdge);
             Node target = this.graphs.get(level).getEdgeTarget(curEdge);
 
-            if (source.isPartition(target.getPartition())) { // pure partitions
-                Node node = new Node(randomString(6), curEdge.getId(), 0);
-                node.addSubordinate(source);
-                node.addSubordinate(target);
-                node.setPartition(source.getPartition());
-                node.setSelfDegree((int) (source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight())); // *2
+            Node node = new Node(randomString(6), curEdge.getId(), 0);
+            node.addSubordinate(source);
+            node.addSubordinate(target);
+            node.setPartition(source.getPartition());
+            node.setSelfDegree((int) (source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight()));
 
-                coarseGraph.addNode(node);
-                verticesInMatching.remove(source);
-                verticesInMatching.remove(target);
-            }
+            coarseGraph.addNode(node);
+            verticesInMatching.remove(source);
+            verticesInMatching.remove(target);
         }
 
         for (Node curNode : verticesInMatching) {

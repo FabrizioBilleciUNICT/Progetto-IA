@@ -17,7 +17,19 @@ public class Main implements Callable<Integer> {
     @CommandLine.Option(names = {"-o", "--outputLen"}, description = "Number of CSV files to save, based on levels", defaultValue = "1")
     String outputLen;
 
+    /*
+    email Finished in: 0 seconds, modularity: 0.5557186637773307, levels: 16, partitions: 10
+    yeast Finished in: 0 seconds, modularity: 0.5844241056393085, levels: 19, partitions: 43
+    power Finished in: 0 seconds, modularity: 0.9345823755550606, levels: 15, partitions: 38
+    football Finished in: 0 seconds, modularity: 0.6044072289092501, levels: 10, partitions: 9
+    cond-mat-2003 Finished in: 8 seconds, modularity: 0.7518555078718582, levels: 23, partitions: 1646
+    cond-mat-2003 (w) Finished in: 82 seconds, modularity: 0.3340850299462593, levels: 74, partitions: 12683
+     */
+
     public Integer call() throws IOException {
+        network = "cond-mat-2003";
+        weighted = "y";
+        outputLen = "1";
         GraphReader gr = switch (network) {
             case "yeast", "email" -> new GmlGraphReader1(network);
             case "power" -> new GmlGraphReader2(network);
