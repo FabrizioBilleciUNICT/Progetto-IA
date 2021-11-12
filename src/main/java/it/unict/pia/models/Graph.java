@@ -10,15 +10,18 @@ public class Graph {
     private final Map<String, Node> nodesMap;
     private final Map<String, Edge> edgesMap;
     private Map<String, Set<String>> neighborsSet;
+    private double M = 0.0;
 
     public Graph(Map<String, Node> nodesMap, Map<String, Edge> edgesMap) {
         this.nodesMap = nodesMap;
         this.edgesMap = edgesMap;
+        this.calcM();
     }
 
     public Graph() {
         this.nodesMap = new HashMap<>();
         this.edgesMap = new HashMap<>();
+        this.M = 0.0;
     }
 
     public Node getEdgeSource(Edge e) {
@@ -131,5 +134,13 @@ public class Graph {
 
     public void addNode(Node n) {
         this.nodesMap.put(n.getId(), n);
+    }
+
+    public void calcM() {
+        this.M = this.edgesMap.values().stream().mapToDouble(Edge::getWeight).reduce(0.0, Double::sum);
+    }
+
+    public double getM() {
+        return M;
     }
 }

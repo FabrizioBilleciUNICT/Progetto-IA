@@ -91,7 +91,7 @@ public class Application {
             node.addSubordinate(source);
             node.addSubordinate(target);
             node.setPartition(source.getPartition());
-            node.setSelfDegree((int) (source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight()));
+            node.setSelfDegree(source.getSelfDegree() + target.getSelfDegree() + curEdge.getWeight());
 
             coarseGraph.addNode(node);
             verticesInMatching.remove(source);
@@ -119,10 +119,12 @@ public class Application {
                 else edgeInCoarseGraph = coarseGraph.addEdge(parent1, parent2);
                 coarseGraph.setEdgeWeight(edgeInCoarseGraph, newWeight);
 
-                coarseGraph.getNodesMap().get(parent1.getId()).increaseDegree((int) oldEdgeWeight);
-                coarseGraph.getNodesMap().get(parent2.getId()).increaseDegree((int) oldEdgeWeight);
+                coarseGraph.getNodesMap().get(parent1.getId()).increaseDegree(oldEdgeWeight);
+                coarseGraph.getNodesMap().get(parent2.getId()).increaseDegree(oldEdgeWeight);
             }
         }
+
+        coarseGraph.calcM();
 
         if (this.graphs.size() > level + 1) this.graphs.set(level + 1, coarseGraph);
         else this.graphs.add(coarseGraph);
@@ -151,7 +153,7 @@ public class Application {
     private Partition setBestPartition(Partition s_i, int level) {
         this.graphs.get(level).setNeighbors();
 
-        Modularity mod = new Modularity(this.graphs.get(level), this.graphs.get(0).getEdgesMap().size());
+        Modularity mod = new Modularity(this.graphs.get(level), this.graphs.get(0).getM());
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();

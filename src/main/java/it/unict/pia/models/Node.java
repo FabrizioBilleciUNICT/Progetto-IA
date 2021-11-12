@@ -7,10 +7,10 @@ public class Node implements Comparable<Node> {
 
     private String id;
     private String label;
-    private int weight;
+    private double weight;
     private int partition;
-    private int selfDegree;
-    private int degree;
+    private double selfDegree;
+    private double degree;
     Set<Node> subordinates;
     Node parent;
 
@@ -48,7 +48,7 @@ public class Node implements Comparable<Node> {
         this.label = label;
     }
 
-    public int getWeight() {
+    public double getWeight() {
         return weight;
     }
 
@@ -98,23 +98,23 @@ public class Node implements Comparable<Node> {
         this.parent = parent;
     }
 
-    public int getSelfDegree() {
+    public double getSelfDegree() {
         return selfDegree;
     }
 
-    public void setSelfDegree(int selfDegree) {
+    public void setSelfDegree(double selfDegree) {
         this.selfDegree = selfDegree;
     }
 
-    public int getDegree() {
+    public double getDegree() {
         return degree;
     }
 
-    public void setDegree(int degree) {
+    public void setDegree(double degree) {
         this.degree = degree;
     }
 
-    public void increaseDegree(int degree) {
+    public void increaseDegree(double degree) {
         this.degree += degree;
     }
 }
