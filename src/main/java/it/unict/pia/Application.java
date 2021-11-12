@@ -6,6 +6,7 @@ import it.unict.pia.models.Node;
 import it.unict.pia.models.Partition;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static it.unict.pia.Utils.randomString;
 
@@ -59,8 +60,15 @@ public class Application {
     }
 
     private Partition solutionGuidedCoarsening(int level) {
-        LinkedList<Node> nodes = new LinkedList<>(this.graphs.get(level).nodeSet());
-        Collections.shuffle(nodes);
+        final double t = 0.1;
+        HashMap<String, Double> l_d = new HashMap<>();
+        List<Node> nodes = this.graphs.get(level).nodeSet().stream().sorted(Comparator.comparingDouble(o1 -> {
+            var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
+            var l_i = o1.getSelfDegree() + this.graphs.get(level).degreeOnPartition(o1) / 2.0;
+            var ld = l_i / d_i;
+            l_d.put(o1.getId(), ld);
+            return 1 - ld; // for reverse order
+        })).collect(Collectors.toList());
 
         Set<Node> verticesInMatching = new HashSet<>();
         Set<Edge> edgesInMatching = new HashSet<>();
@@ -69,14 +77,20 @@ public class Application {
             if (!verticesInMatching.contains(n)) {
                 verticesInMatching.add(n);
 
-                Optional<Node> opt = this.graphs.get(level).adjOf(n)
-                        .stream()
-                        .filter(x -> x.isPartition(n.getPartition()) && !verticesInMatching.contains(x))
-                        .max(Comparator.comparingDouble(o1 -> o1.getSelfDegree() / (o1.getDegree() + 1.0))); // maybe l_i / d_i ?
-                if (opt.isPresent()) {
-                    Edge e = this.graphs.get(level).getEdge(n, opt.get());
-                    verticesInMatching.add(opt.get());
-                    edgesInMatching.add(e);
+                if (l_d.get(n.getId()) >= t) {
+                    Optional<Node> opt = this.graphs.get(level).adjOf(n)
+                            .stream()
+                            .filter(x ->
+                                    x.isPartition(n.getPartition()) &&
+                                            !verticesInMatching.contains(x) &&
+                                            l_d.get(x.getId()) > t
+                            )
+                            .max(Comparator.comparingDouble(o1 -> l_d.get(o1.getId())));
+                    if (opt.isPresent()) {
+                        Edge e = this.graphs.get(level).getEdge(n, opt.get());
+                        verticesInMatching.add(opt.get());
+                        edgesInMatching.add(e);
+                    }
                 }
             }
         }
@@ -155,7 +169,11 @@ public class Application {
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();
-        Set<Node> nodesCV = getNodesCV(level);
+        List<Node> nodesCV = getNodesCV(level).stream().sorted(Comparator.comparingDouble(o1 -> {
+            var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
+            var l_i = o1.getSelfDegree() + this.graphs.get(level).degreeOnPartition(o1) / 2.0;
+            return l_i / d_i;
+        })).collect(Collectors.toList());
 
         for (Node v : nodesCV) {
             final int partitionFrom = v.getPartition();
