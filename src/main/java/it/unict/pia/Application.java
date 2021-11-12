@@ -22,31 +22,39 @@ public class Application {
     public String annealing() {
         Stats stats = new Stats();
         Partition s_i = createSeedPartition();
+
+        final int ct = this.graphs.get(0).nodeSet().size() / 10;
         int i = 0;
         double currentModularity = -0.5;
         int counter = 0;
         while (counter < 5) {
-            s_i = solutionGuidedCoarsening(i);
-            s_i = setBestPartition(s_i, i+1);
-            i++;
+            var lastSize = this.graphs.get(i).nodeSet().size() + 1;
+            while (this.graphs.get(i).nodeSet().size() > ct && this.graphs.get(i).nodeSet().size() < lastSize) {
+                lastSize = this.graphs.get(i).nodeSet().size();
+                s_i = solutionGuidedCoarsening(i);
+                s_i = setBestPartition(s_i, i+1);
+                i++;
+            }
+
+            stats.setLevels(i);
+            stats.setModularity(currentModularity);
+
+            while (i > 0) {
+                s_i = unCoarsening(s_i, i);
+                s_i = setBestPartition(s_i, i-1);
+                i--;
+            }
 
             if (s_i.getModularity() > currentModularity + 0.0001) {
                 currentModularity = s_i.getModularity();
                 counter = 0;
             }
             else counter++;
+
+            System.out.println(s_i.getModularity());
+
+            stats.setPartitions(s_i.getPartition().size());
         }
-
-        stats.setLevels(i);
-        stats.setModularity(currentModularity);
-
-        while (i > 0) {
-            s_i = unCoarsening(s_i, i);
-            s_i = setBestPartition(s_i, i-1);
-            i--;
-        }
-
-        stats.setPartitions(s_i.getPartition().size());
 
         return stats.getStats();
     }
