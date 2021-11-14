@@ -13,10 +13,12 @@ import static it.unict.pia.Utils.randomString;
 public class Application {
 
     public Stack<Graph> graphs = new Stack<>();
+    private final double t;
 
-    public Application(Graph graph) {
+    public Application(Graph graph, double t) {
         this.graphs.add(graph);
         this.graphs.get(0).setNeighbors();
+        this.t = t;
     }
 
     public String annealing() {
@@ -51,7 +53,7 @@ public class Application {
             }
             else counter++;
 
-            System.out.println(s_i.getModularity());
+            //System.out.println(s_i.getModularity());
 
             stats.setPartitions(s_i.getPartition().size());
         }
@@ -68,12 +70,9 @@ public class Application {
     }
 
     private Partition solutionGuidedCoarsening(int level) {
-        final double t = 0.1;
         HashMap<String, Double> l_d = new HashMap<>();
-        List<Node> nodes = this.graphs.get(level).nodeSet().stream().sorted(Comparator.comparingDouble(o1 -> {
-            var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
-            var l_i = o1.getSelfDegree() + this.graphs.get(level).degreeOnPartition(o1) / 2.0;
-            var ld = l_i / d_i;
+        List<Node> nodes = this.graphs.get(level).nodeSet().parallelStream().sorted(Comparator.comparingDouble(o1 -> {
+            var ld = this.graphs.get(level).getLD(o1);
             l_d.put(o1.getId(), ld);
             return 1 - ld; // for reverse order
         })).collect(Collectors.toList());
@@ -87,7 +86,7 @@ public class Application {
 
                 if (l_d.get(n.getId()) >= t) {
                     Optional<Node> opt = this.graphs.get(level).adjOf(n)
-                            .stream()
+                            .parallelStream()
                             .filter(x ->
                                     x.isPartition(n.getPartition()) &&
                                             !verticesInMatching.contains(x) &&
@@ -183,11 +182,9 @@ public class Application {
         mod.initializeQ(s_i);
         Partition s_best = Partition.copyOf(s_i);
         double currentQ = mod.getQ();
-        List<Node> nodesCV = getNodesCV(level).stream().sorted(Comparator.comparingDouble(o1 -> {
-            var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
-            var l_i = o1.getSelfDegree() + this.graphs.get(level).degreeOnPartition(o1) / 2.0;
-            return l_i / d_i;
-        })).collect(Collectors.toList());
+        List<Node> nodesCV = getNodesCV(level).parallelStream().sorted(Comparator.comparingDouble(o1 ->
+                this.graphs.get(level).getLD(o1))
+        ).collect(Collectors.toList());
 
         for (Node v : nodesCV) {
             final int partitionFrom = v.getPartition();

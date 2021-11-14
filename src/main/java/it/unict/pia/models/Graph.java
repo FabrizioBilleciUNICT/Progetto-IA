@@ -88,6 +88,12 @@ public class Graph {
         return degree;
     }
 
+    public double getLD(Node o1) {
+        var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
+        var l_i = o1.getSelfDegree() + this.degreeOnPartition(o1) / 2.0;
+        return l_i / d_i;
+    }
+
     public int getSize() {
         return this.nodesMap.size();
     }
@@ -137,7 +143,7 @@ public class Graph {
     }
 
     public void calcM() {
-        this.M = this.edgesMap.values().stream().mapToDouble(Edge::getWeight).reduce(0.0, Double::sum);
+        this.M = this.edgesMap.values().parallelStream().mapToDouble(Edge::getWeight).reduce(0.0, Double::sum);
     }
 
     public double getM() {

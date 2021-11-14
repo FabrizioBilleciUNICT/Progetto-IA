@@ -12,14 +12,14 @@ import static it.unict.pia.Utils.saveGraph;
 public class Main implements Callable<Integer> {
     @CommandLine.Option(names = {"-n", "--network"}, required = true, description = "Network: 'yeast' | 'email' | 'power' | 'football' | 'cond-mat-2003'", defaultValue = "test1")
     String network;
+    @CommandLine.Option(names = {"-t", "--threshold"}, required = true, description = "Threshold for l/d ratio", defaultValue = "0.1")
+    String t;
     @CommandLine.Option(names = {"-w", "--weighted"}, description = "Weighted edges: 'y' | 'n'", defaultValue = "n")
     String weighted;
     @CommandLine.Option(names = {"-o", "--outputLen"}, description = "Number of CSV files to save, based on levels", defaultValue = "1")
     String outputLen;
 
     public Integer call() throws IOException {
-        network = "cond-mat-2003";
-        weighted = "n";
         GraphReader gr = switch (network) {
             case "yeast", "email" -> new GmlGraphReader1(network);
             case "power" -> new GmlGraphReader2(network);
@@ -28,7 +28,7 @@ public class Main implements Callable<Integer> {
             default -> new CSVGraphReader(network); // test0, test1
         };
 
-        Application a = new Application(gr.getGraph());
+        Application a = new Application(gr.getGraph(), Double.parseDouble(t));
         String stats = a.annealing();
         System.out.println(stats);
 
