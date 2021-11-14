@@ -71,7 +71,7 @@ public class Application {
 
     private Partition solutionGuidedCoarsening(int level) {
         HashMap<String, Double> l_d = new HashMap<>();
-        List<Node> nodes = this.graphs.get(level).nodeSet().parallelStream().sorted(Comparator.comparingDouble(o1 -> {
+        List<Node> nodes = this.graphs.get(level).nodeSet().stream().sorted(Comparator.comparingDouble(o1 -> {
             var ld = this.graphs.get(level).getLD(o1);
             l_d.put(o1.getId(), ld);
             return 1 - ld; // for reverse order
