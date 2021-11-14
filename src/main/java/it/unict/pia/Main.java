@@ -18,7 +18,7 @@ public class Main implements Callable<Integer> {
     String outputLen;
 
     public Integer call() throws IOException {
-        network = "yeast";
+        network = "cond-mat-2003";
         weighted = "n";
         GraphReader gr = switch (network) {
             case "yeast", "email" -> new GmlGraphReader1(network);

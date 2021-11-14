@@ -163,6 +163,10 @@ public class Application {
                 Set<Node> contractedNodes = node.getSubordinates();
                 newPartition.addAll(contractedNodes);
                 for (Node nc : contractedNodes) {
+                    if (nc.getId().equals(node.getId())) {
+                        nc.setDegree(node.getDegree());
+                        nc.setSelfDegree(node.getSelfDegree());
+                    }
                     nc.setPartition(entry.getKey());
                     this.graphs.get(level - 1).getNodesMap().put(nc.getId(), nc);
                 }

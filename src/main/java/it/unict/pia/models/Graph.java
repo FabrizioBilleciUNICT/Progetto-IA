@@ -74,8 +74,8 @@ public class Graph {
         return neighbourhood;
     }
 
-    public int degreeOnPartition(Node n) {
-        int degree = 0;
+    public double degreeOnPartition(Node n) {
+        double degree = 0.0;
 
         for (Edge x : this.edgesOf(n)) {
             String[] keys = x.getId().split("-");
