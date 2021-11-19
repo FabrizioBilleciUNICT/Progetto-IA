@@ -14,11 +14,13 @@ public class Application {
 
     public Stack<Graph> graphs = new Stack<>();
     private final double t;
+    private final int maxDuration;
 
-    public Application(Graph graph, double t) {
+    public Application(Graph graph, double t, int maxDuration) {
         this.graphs.add(graph);
         this.graphs.get(0).setNeighbors();
         this.t = t;
+        this.maxDuration = maxDuration;
     }
 
     public String annealing() {
@@ -29,7 +31,7 @@ public class Application {
         int i = 0;
         double currentModularity = -0.5;
         int counter = 0;
-        while (counter < 5) {
+        while (counter < 5 && stats.getElapsedTime() < maxDuration) {
             var lastSize = this.graphs.get(i).nodeSet().size() + 1;
             while (this.graphs.get(i).nodeSet().size() > ct && this.graphs.get(i).nodeSet().size() < lastSize) {
                 lastSize = this.graphs.get(i).nodeSet().size();

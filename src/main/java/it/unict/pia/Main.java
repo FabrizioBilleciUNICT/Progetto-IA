@@ -16,11 +16,13 @@ public class Main implements Callable<Integer> {
     String t;
     @CommandLine.Option(names = {"-w", "--weighted"}, description = "Weighted edges: 'y' | 'n'", defaultValue = "n")
     String weighted;
+    @CommandLine.Option(names = {"-d", "--duration"}, description = "Max duration, in seconds", defaultValue = "60")
+    String duration;
     @CommandLine.Option(names = {"-o", "--outputLen"}, description = "Number of CSV files to save, based on levels", defaultValue = "1")
     String outputLen;
 
     public Integer call() throws IOException {
-        GraphReader gr = switch (network) {
+       GraphReader gr = switch (network) {
             case "yeast", "email" -> new GmlGraphReader1(network);
             case "power" -> new GmlGraphReader2(network);
             case "football" -> new GmlGraphReader3(network);
@@ -28,7 +30,7 @@ public class Main implements Callable<Integer> {
             default -> new CSVGraphReader(network); // test0, test1
         };
 
-        Application a = new Application(gr.getGraph(), Double.parseDouble(t));
+        Application a = new Application(gr.getGraph(), Double.parseDouble(t), Integer.parseInt(duration));
         String stats = a.annealing();
         System.out.println(stats);
 

@@ -29,4 +29,8 @@ public class Stats {
                 ", levels: " + levels +
                 ", partitions: " + partitions;
     }
+
+    public int getElapsedTime() {
+        return (int) ((System.currentTimeMillis() - timeStart) / 1000);
+    }
 }

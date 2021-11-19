@@ -89,8 +89,8 @@ public class Graph {
     }
 
     public double getLD(Node o1) {
-        var d_i = o1.getDegree() + o1.getSelfDegree() * 2.0;
-        var l_i = o1.getSelfDegree() + this.degreeOnPartition(o1) / 2.0;
+        var d_i = o1.getDegree() + o1.getSelfDegree();
+        var l_i = o1.getSelfDegree() + this.degreeOnPartition(o1);
         return l_i / d_i;
     }
 
